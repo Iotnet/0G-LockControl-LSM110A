@@ -1,0 +1,168 @@
+<svg width="100%" viewBox="0 0 760 815" role="img" xmlns="http://www.w3.org/2000/svg" font-family="'Anthropic Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif">
+  <title>Arquitectura del producto final — 0G LockControl (LSM110A)</title>
+  <desc>Sistema completo: alarma IoT dual con acelerómetro LIS2DW12 (I2C) y sensor magnético reed/hall DRV5032, alimentación CR2450 + cap 470µF, antena PCB y header SWD para debug</desc>
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M2 1L8 5L2 9" fill="none" stroke="context-stroke" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+    </marker>
+  </defs>
+
+  <!-- ===================== PCB outline ===================== -->
+  <rect x="30" y="20" width="700" height="780" rx="20" fill="rgb(68,68,65)" stroke="rgb(180,178,169)" stroke-width="0.5"/>
+  <text x="380" y="50" text-anchor="middle" fill="rgb(211,209,199)" font-size="15" font-weight="600">
+    Arquitectura del producto final — 0G LockControl
+  </text>
+  <text x="380" y="70" text-anchor="middle" fill="rgb(180,178,169)" font-size="12">
+    Spec v1.0 · Sigfox RC2 (902-928 MHz México) · firmware API sobre LSM110A · Stop2 ≈ 3 µA
+  </text>
+
+  <!-- ===================== POWER SECTION ===================== -->
+  <rect x="50" y="95" width="430" height="86" rx="12" fill="rgb(99,56,6)" stroke="rgb(239,159,39)" stroke-width="0.5"/>
+  <text x="265" y="115" text-anchor="middle" fill="rgb(250,199,117)" font-size="13" font-weight="600">Alimentación</text>
+
+  <!-- Battery -->
+  <rect x="65" y="128" width="105" height="42" rx="6" fill="rgb(99,56,6)" stroke="rgb(239,159,39)"/>
+  <text x="117" y="145" text-anchor="middle" fill="rgb(250,199,117)" font-size="12" font-weight="500">CR2450</text>
+  <text x="117" y="161" text-anchor="middle" fill="rgb(239,159,39)" font-size="11">3 V · 620 mAh</text>
+
+  <!-- Cap soporte -->
+  <rect x="185" y="128" width="105" height="42" rx="6" fill="rgb(99,56,6)" stroke="rgb(239,159,39)"/>
+  <text x="237" y="145" text-anchor="middle" fill="rgb(250,199,117)" font-size="12" font-weight="500">Cap 470 µF</text>
+  <text x="237" y="161" text-anchor="middle" fill="rgb(239,159,39)" font-size="11">soporte pulso TX</text>
+
+  <!-- LDO opcional -->
+  <rect x="305" y="128" width="160" height="42" rx="6" fill="rgb(99,56,6)" stroke="rgb(239,159,39)"/>
+  <text x="385" y="145" text-anchor="middle" fill="rgb(250,199,117)" font-size="12" font-weight="500">LDO TPS7A02 + bypass 0 Ω</text>
+  <text x="385" y="161" text-anchor="middle" fill="rgb(239,159,39)" font-size="11">footprint opcional (3.0 V)</text>
+
+  <!-- Power chain arrows -->
+  <line x1="170" y1="149" x2="183" y2="149" stroke="rgb(186,117,23)" stroke-width="1" marker-end="url(#arrow)"/>
+  <line x1="290" y1="149" x2="303" y2="149" stroke="rgb(186,117,23)" stroke-width="1" marker-end="url(#arrow)"/>
+
+  <!-- Decoupling box -->
+  <rect x="495" y="105" width="225" height="76" rx="10" fill="rgb(99,56,6)" stroke="rgb(239,159,39)" stroke-width="0.5"/>
+  <text x="608" y="125" text-anchor="middle" fill="rgb(250,199,117)" font-size="13" font-weight="600">Desacoplo VDD</text>
+  <text x="608" y="146" text-anchor="middle" fill="rgb(239,159,39)" font-size="11">100 nF (cerámico) + 10 µF</text>
+  <text x="608" y="164" text-anchor="middle" fill="rgb(239,159,39)" font-size="11">lo más cerca posible del pin 11</text>
+
+  <!-- VDD arrow to module -->
+  <line x1="385" y1="172" x2="385" y2="218" stroke="rgb(186,117,23)" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <text x="395" y="200" fill="rgb(194,192,182)" font-size="11">Pin 11 VDD (3.0 V directo)</text>
+
+  <!-- ===================== LSM110A MODULE ===================== -->
+  <rect x="220" y="220" width="320" height="240" rx="14" fill="rgb(60,52,137)" stroke="rgb(175,169,236)" stroke-width="1"/>
+  <text x="380" y="250" text-anchor="middle" fill="rgb(206,203,246)" font-size="14" font-weight="600">LSM110A — firmware API</text>
+  <text x="380" y="272" text-anchor="middle" fill="rgb(175,169,236)" font-size="12">STM32WL55 · ARM Cortex-M4 @ 48 MHz</text>
+  <text x="380" y="290" text-anchor="middle" fill="rgb(175,169,236)" font-size="12">256 KB Flash · 64 KB RAM</text>
+  <text x="380" y="308" text-anchor="middle" fill="rgb(175,169,236)" font-size="12">Radio sub-GHz integrado · 14 dBm default</text>
+  <text x="380" y="326" text-anchor="middle" fill="rgb(175,169,236)" font-size="12">El código C corre dentro del módulo</text>
+
+  <!-- Firmware blocks -->
+  <rect x="240" y="345" width="135" height="34" rx="6" fill="rgb(8,80,65)" stroke="rgb(93,202,165)" stroke-width="0.5"/>
+  <text x="307" y="367" text-anchor="middle" fill="rgb(93,202,165)" font-size="11" font-weight="500">Sigfox stack (SJI)</text>
+
+  <rect x="385" y="345" width="135" height="34" rx="6" fill="rgb(8,80,65)" stroke="rgb(93,202,165)" stroke-width="0.5"/>
+  <text x="452" y="367" text-anchor="middle" fill="rgb(93,202,165)" font-size="11" font-weight="500">Drivers I²C + EXTI</text>
+
+  <rect x="240" y="388" width="280" height="32" rx="6" fill="rgb(8,80,65)" stroke="rgb(93,202,165)" stroke-width="0.5"/>
+  <text x="380" y="408" text-anchor="middle" fill="rgb(93,202,165)" font-size="11" font-weight="500">Low-power manager · Stop2 ≈ 3 µA</text>
+
+  <rect x="240" y="429" width="280" height="22" rx="6" fill="rgb(60,52,137)" stroke="rgb(175,169,236)" stroke-width="0.5"/>
+  <text x="380" y="445" text-anchor="middle" fill="rgb(175,169,236)" font-size="11">Heartbeat 24 h · cooldown 60 s · max 130 msg/día</text>
+
+  <!-- ===================== SENSORS — I2C (LEFT) ===================== -->
+  <rect x="50" y="220" width="150" height="132" rx="12" fill="rgb(39,80,10)" stroke="rgb(151,196,89)" stroke-width="0.5"/>
+  <text x="125" y="240" text-anchor="middle" fill="rgb(192,221,151)" font-size="13" font-weight="600">Bus I²C</text>
+  <text x="125" y="258" text-anchor="middle" fill="rgb(151,196,89)" font-size="11">PA9 SCL · PA10 SDA</text>
+  <text x="125" y="274" text-anchor="middle" fill="rgb(151,196,89)" font-size="11">+ pull-ups 4.7 kΩ</text>
+
+  <!-- LIS2DW12 -->
+  <rect x="60" y="290" width="130" height="32" rx="6" fill="rgb(39,80,10)" stroke="rgb(151,196,89)"/>
+  <text x="125" y="304" text-anchor="middle" fill="rgb(192,221,151)" font-size="11" font-weight="500">LIS2DW12 (acel)</text>
+  <text x="125" y="318" text-anchor="middle" fill="rgb(151,196,89)" font-size="10">INT1 → PA0 (EXTI0)</text>
+
+  <!-- I2C arrow to module -->
+  <line x1="200" y1="280" x2="218" y2="280" stroke="rgb(151,196,89)" stroke-width="1" marker-end="url(#arrow)"/>
+
+  <!-- ===================== SENSOR MAGNÉTICO (LEFT-BOTTOM) ===================== -->
+  <rect x="50" y="370" width="150" height="120" rx="12" fill="rgb(39,80,10)" stroke="rgb(151,196,89)" stroke-width="0.5"/>
+  <text x="125" y="390" text-anchor="middle" fill="rgb(192,221,151)" font-size="13" font-weight="600">Sensor magnético</text>
+  <text x="125" y="408" text-anchor="middle" fill="rgb(151,196,89)" font-size="11">apertura puerta/ventana</text>
+
+  <rect x="60" y="418" width="130" height="28" rx="5" fill="rgb(39,80,10)" stroke="rgb(151,196,89)"/>
+  <text x="125" y="436" text-anchor="middle" fill="rgb(151,196,89)" font-size="11">Reed switch NA</text>
+
+  <rect x="60" y="450" width="130" height="28" rx="5" fill="rgb(39,80,10)" stroke="rgb(151,196,89)"/>
+  <text x="125" y="468" text-anchor="middle" fill="rgb(151,196,89)" font-size="11">Hall DRV5032 (SMD)</text>
+
+  <text x="125" y="488" text-anchor="middle" fill="rgb(192,221,151)" font-size="10" font-style="italic">ambos footprints en PCB</text>
+
+  <!-- Mag arrow to module -->
+  <line x1="200" y1="430" x2="218" y2="430" stroke="rgb(151,196,89)" stroke-width="1" marker-end="url(#arrow)"/>
+  <text x="208" y="423" fill="rgb(192,221,151)" font-size="10">PA1 (EXTI1)</text>
+
+  <!-- ===================== DEBUG/CONTROL (RIGHT) ===================== -->
+  <rect x="560" y="220" width="160" height="78" rx="10" fill="rgb(12,68,124)" stroke="rgb(133,183,235)" stroke-width="0.5"/>
+  <text x="640" y="242" text-anchor="middle" fill="rgb(181,212,244)" font-size="13" font-weight="600">SWD header</text>
+  <text x="640" y="262" text-anchor="middle" fill="rgb(133,183,235)" font-size="11">VDD · SWDIO · SWCLK · GND</text>
+  <text x="640" y="282" text-anchor="middle" fill="rgb(133,183,235)" font-size="11">PA13 / PA14 — pines 7, 8</text>
+  <line x1="540" y1="260" x2="558" y2="260" stroke="rgb(24,95,165)" stroke-width="1" marker-end="url(#arrow)"/>
+
+  <rect x="560" y="312" width="160" height="62" rx="10" fill="rgb(12,68,124)" stroke="rgb(133,183,235)" stroke-width="0.5"/>
+  <text x="640" y="332" text-anchor="middle" fill="rgb(181,212,244)" font-size="13" font-weight="600">UART debug</text>
+  <text x="640" y="352" text-anchor="middle" fill="rgb(133,183,235)" font-size="11">PB6 TX · PB7 RX</text>
+  <text x="640" y="368" text-anchor="middle" fill="rgb(133,183,235)" font-size="10" font-style="italic">no poblar en producción</text>
+  <line x1="540" y1="343" x2="558" y2="343" stroke="rgb(24,95,165)" stroke-width="1" marker-end="url(#arrow)"/>
+
+  <rect x="560" y="388" width="160" height="62" rx="10" fill="rgb(12,68,124)" stroke="rgb(133,183,235)" stroke-width="0.5"/>
+  <text x="640" y="408" text-anchor="middle" fill="rgb(181,212,244)" font-size="13" font-weight="600">NRST + BOOT0</text>
+  <text x="640" y="428" text-anchor="middle" fill="rgb(133,183,235)" font-size="11">pin 30 (cap 100 nF) · pin 31</text>
+  <text x="640" y="444" text-anchor="middle" fill="rgb(133,183,235)" font-size="10" font-style="italic">BOOT0 flotante</text>
+  <line x1="540" y1="419" x2="558" y2="419" stroke="rgb(24,95,165)" stroke-width="1" marker-end="url(#arrow)"/>
+
+  <!-- ===================== RF SECTION (BOTTOM) ===================== -->
+  <rect x="180" y="510" width="400" height="118" rx="12" fill="rgb(113,43,19)" stroke="rgb(240,153,123)" stroke-width="0.5"/>
+  <text x="380" y="532" text-anchor="middle" fill="rgb(245,196,179)" font-size="13" font-weight="600">Sección RF — Sigfox RC2 (902–928 MHz México)</text>
+
+  <rect x="200" y="548" width="160" height="62" rx="8" fill="rgb(113,43,19)" stroke="rgb(240,153,123)"/>
+  <text x="280" y="568" text-anchor="middle" fill="rgb(245,196,179)" font-size="12" font-weight="500">Traza 50 Ω</text>
+  <text x="280" y="586" text-anchor="middle" fill="rgb(240,153,123)" font-size="11">Pin 33 RFOUT</text>
+  <text x="280" y="600" text-anchor="middle" fill="rgb(240,153,123)" font-size="10">microstrip FR4 1.6 mm</text>
+
+  <rect x="400" y="548" width="160" height="62" rx="8" fill="rgb(113,43,19)" stroke="rgb(240,153,123)"/>
+  <text x="480" y="568" text-anchor="middle" fill="rgb(245,196,179)" font-size="12" font-weight="500">Antena PCB</text>
+  <text x="480" y="586" text-anchor="middle" fill="rgb(240,153,123)" font-size="11">diseño SJI</text>
+  <text x="480" y="600" text-anchor="middle" fill="rgb(240,153,123)" font-size="10">certificado FCC</text>
+
+  <line x1="360" y1="579" x2="398" y2="579" stroke="rgb(153,60,29)" stroke-width="1" marker-end="url(#arrow)"/>
+
+  <!-- Arrow from module to RF -->
+  <line x1="380" y1="460" x2="380" y2="508" stroke="rgb(153,60,29)" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <text x="388" y="488" fill="rgb(245,196,179)" font-size="11">Pin 33 RFOUT</text>
+
+  <!-- ===================== BOTTOM LEGEND — CICLO DE OPERACIÓN ===================== -->
+  <rect x="50" y="650" width="670" height="148" rx="12" fill="rgb(68,68,65)" stroke="rgb(180,178,169)" stroke-width="0.5"/>
+  <text x="385" y="676" text-anchor="middle" fill="rgb(211,209,199)" font-size="14" font-weight="600">Ciclo de operación event-driven</text>
+
+  <!-- Line 1: cycle phases -->
+  <text x="385" y="700" text-anchor="middle" fill="rgb(151,196,89)" font-size="12" font-weight="600">Sleep ≈ 3 µA  →  Wake INT (PA0 acel ó PA1 mag)  →  Lectura sensor</text>
+
+  <!-- Line 2: cycle continuation -->
+  <text x="385" y="720" text-anchor="middle" fill="rgb(240,153,123)" font-size="12" font-weight="600">→  TX Sigfox +14 dBm ≈ 50 mA × 2 s  →  Sleep</text>
+
+  <!-- Line 3: protocol limits -->
+  <text x="385" y="744" text-anchor="middle" fill="rgb(180,178,169)" font-size="11">
+    Payload 12 bytes · Heartbeat 24 h · Cooldown 60 s · Máx. 130 msg/día (límite Sigfox 140)
+  </text>
+
+  <!-- Line 4: battery autonomy -->
+  <text x="385" y="763" text-anchor="middle" fill="rgb(180,178,169)" font-size="11">
+    CR2450 + cap 470 µF → autonomía de meses a años según frecuencia de eventos
+  </text>
+
+  <!-- Line 5: form factor -->
+  <text x="385" y="782" text-anchor="middle" fill="rgb(150,148,140)" font-size="10" font-style="italic">
+    Tamaño objetivo: PCB &lt; 40 × 30 mm · uso interior (oficina, bodega, cuarto frío)
+  </text>
+
+</svg>

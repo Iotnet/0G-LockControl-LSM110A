@@ -29,6 +29,8 @@ Dispositivo compacto de alarma inalámbrica que detecta movimiento/vibración (a
 
 ## 3. Arquitectura del sistema
 
+![Arquitectura del producto final — 0G LockControl](./Images/arquitectura-producto-v1.png)
+
 ### Ciclo de operación
 
 ```

@@ -30,27 +30,9 @@ Sleep (3µA)  →  Wake por INT (accel o magnético)  →  Leer sensor
 
 ### Bloques del sistema
 
-```
-┌─────────────────────────────────────────────────────────────┐
-│                    PCB Custom (< 40 × 30 mm)                 │
-│                                                              │
-│  CR2450 ──► [LDO bypass 0Ω] ──► VDD 3.0 V                   │
-│                    │              │                          │
-│                    │    ┌─────────┴──────────┐               │
-│                    │    │     LSM110A        │               │
-│  LIS2DW12 ◄──I2C──┤    │  STM32WL (Cortex-M4│               │
-│  (accel)  PA9/10   │    │  + radio sub-GHz)  │               │
-│    INT1 ──► PA0    │    │  Firmware API      │               │
-│                    │    │  Sigfox stack (SJI)│               │
-│  Reed/Hall ► PA1   │    └────────┬───────────┘               │
-│  (magnético)       │             │                           │
-│                    │         Pin 33 (RF 50 Ω)                │
-│  SWD header ◄── PA13/14         │                            │
-│  UART debug ◄── PB6/7     Antena PCB (diseño SJI)            │
-│                                                              │
-│  ──► Sigfox Cloud ──► Callback HTTP ──► App / Dashboard      │
-└─────────────────────────────────────────────────────────────┘
-```
+![Arquitectura del producto final — 0G LockControl](./docs/Images/arquitectura-producto-v1.png)
+
+> Diagrama disponible también en formato vectorial: [arquitectura-producto-v1.svg](./docs/Images/arquitectura-producto-v1.svg)
 
 ### Flujo de operación
 
