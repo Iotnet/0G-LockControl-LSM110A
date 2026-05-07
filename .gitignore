@@ -1,0 +1,60 @@
+# Compiled files
+*.o
+*.obj
+*.elf
+*.bin
+*.hex
+*.map
+*.list
+
+# IDE files
+.settings/
+.project
+.cproject
+*.launch
+.metadata/
+Debug/
+Release/
+
+# STM32CubeIDE
+*.d
+*.su
+
+# macOS
+.DS_Store
+._*
+
+# Windows
+Thumbs.db
+desktop.ini
+~$*
+
+# Temporary files
+*.tmp
+*.bak
+*.swp
+*~
+
+# Build directories
+build/
+out/
+
+# Node modules (App)
+node_modules/
+.expo/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+
+# Archives (too large for git)
+*.zip
+*.rar
+*.7z
+*.exe
+
+# Large binaries
+*.pdf
+!docs/References/*.pdf
+!Hardware/Datasheets/*.pdf
