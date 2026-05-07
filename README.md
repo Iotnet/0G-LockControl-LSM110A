@@ -70,14 +70,14 @@ Sleep (3µA)  →  Wake por INT (accel o magnético)  →  Leer sensor
 
 | Milestone | Entregable | Semana |
 |---|---|---|
-| **M0** | Repo + spec + CubeIDE setup | 1 |
-| **M1** | Esquemático KiCad | 2-3 |
-| **M2** | FW en Nucleo (accel + reed + Sigfox) | 2-3 |
-| **M3** | PCB layout + gerbers | 3-4 |
-| **M4** | Low power validado en Nucleo | 3-4 |
-| **M5** | PCB fabricada y ensamblada | 5-6 |
-| **M6** | Integración FW en PCB custom | 6-7 |
-| **M7** | Prueba de campo | 8 |
+| **M0** | Repo + spec + CubeIDE setup | 1-2 |
+| **M1** | Esquemático KiCad | 2-5 |
+| **M2** | FW en Nucleo (accel + reed + Sigfox) | 2-5 |
+| **M3** | PCB layout + gerbers | 5-7 |
+| **M4** | Low power validado en Nucleo | 7-8 |
+| **M5** | PCB fabricada y ensamblada | 8-11 |
+| **M6** | Integración FW en PCB custom | 11-12 |
+| **M7** | Prueba de campo | 12 |
 
 ## Estructura del repositorio
 
