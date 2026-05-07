@@ -183,7 +183,7 @@ La transición al **LSM110A** permite pasar de una placa de desarrollo a un SoC 
 
 ## Desarrollador
 
-**José Francisco Díaz Figueroa** — Hardware Developer
+**José Francisco Díaz Figueroa** — Embedded Systems R&D Engineer
 jdiaz@iotnet.mx
 
 ## Referencias
