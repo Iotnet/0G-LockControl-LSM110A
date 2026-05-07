@@ -1,144 +1,192 @@
-# 0G LockControl - Dispositivo IoT de Monitoreo de Apertura
+# 0G LockControl — Alarma IoT dual (acelerómetro + magnético)
 
-> Diseño y desarrollo de una contrachapa IoT con tecnología Sigfox basada en el SoC LSM110A
+> Alarma inalámbrica compacta con detección de movimiento y apertura de puerta/ventana, comunicación Sigfox RC2 sobre el SoC LSM110A.
 
 ## Descripción
 
-**0G LockControl** es un dispositivo electrónico autónomo de monitoreo de apertura de puertas con comunicación a través de la red **Sigfox (0G)**. El sistema detecta la apertura de una puerta mediante un sensor magnético (reed switch) y transmite una alerta en tiempo real que llega al usuario final a través de una aplicación móvil.
+**0G LockControl** es un dispositivo electrónico autónomo que combina **dos modos de detección de eventos** y los transmite por la red **Sigfox (0G)**:
 
-El dispositivo está diseñado para ofrecer:
-- Ultra bajo consumo energético (operación con batería por meses/años)
-- Comunicación LPWAN vía Sigfox (sin dependencia de WiFi o red celular)
-- Tamaño compacto e instalación sencilla
-- Costo reducido de operación y manufactura
+- **Movimiento / vibración** vía acelerómetro **LIS2DW12** (I²C).
+- **Apertura de puerta o ventana** vía sensor magnético — **reed switch NA** o **hall DRV5032** (ambos footprints en la PCB).
 
-## Arquitectura del Sistema
+El dispositivo es **event-driven**: duerme en modo Stop2 (~3 µA total) y solo despierta por interrupción de hardware. El firmware se ejecuta directamente sobre el **STM32WL** integrado en el LSM110A (firmware API, sin MCU externo).
+
+### Características
+
+- Comunicación **Sigfox RC2** (902-928 MHz, México) — sin WiFi ni red celular.
+- Tamaño objetivo **< 5 cm** — instalación adhesiva en interior (oficina, bodega, cuarto frío).
+- Batería desechable **CR2450 (3 V, 620 mAh)** + capacitor de soporte 470 µF para pulsos de TX.
+- Vida útil estimada de meses a años según frecuencia de eventos.
+- Costo reducido de operación y manufactura.
+
+## Arquitectura del sistema
+
+### Ciclo de operación
 
 ```
-┌─────────────────────────────────────────────────────────────────────────┐
-│                        ARQUITECTURA 0G LOCKCONTROL                      │
-│                                                                         │
-│  ┌──────────────────────┐    ┌──────────────┐    ┌───────┐   ┌───────┐ │
-│  │     DISPOSITIVO       │    │   GATEWAY     │    │ CLOUD │   │  APP  │ │
-│  │                       │    │   SIGFOX      │    │       │   │ MÓVIL │ │
-│  │  ┌─────────────────┐ │    │               │    │       │   │       │ │
-│  │  │  Reed Switch     │ │    │    ╱╲  ╱╲    │    │  ☁️   │   │  📱  │ │
-│  │  │  (Sensor Mag.)   │─┼───▶│   ╱  ╲╱  ╲   │───▶│       │──▶│       │ │
-│  │  └─────────────────┘ │    │  ╱    ╱╲   ╲  │    │       │   │       │ │
-│  │  ┌─────────────────┐ │    │ ╱    ╱  ╲   ╲ │    │       │   │       │ │
-│  │  │  LSM110A (SoC)   │ │    └──────────────┘    └───────┘   └───────┘ │
-│  │  │  STM32WL Core    │ │                                              │
-│  │  │  + Radio Sigfox  │ │         Red Sigfox          Callback          │
-│  │  └─────────────────┘ │         (868 MHz)            HTTP/S            │
-│  │  ┌─────────────────┐ │                                                │
-│  │  │  Batería         │ │                                                │
-│  │  └─────────────────┘ │                                                │
-│  └──────────────────────┘                                                │
-└─────────────────────────────────────────────────────────────────────────┘
+Sleep (3µA)  →  Wake por INT (accel o magnético)  →  Leer sensor
+        →  Armar payload 12 bytes  →  TX Sigfox (~50 mA × 2 s)  →  Sleep
 ```
 
-### Flujo de Operación
+### Bloques del sistema
 
-1. **Detección**: El reed switch detecta la apertura de la puerta (cambio de campo magnético)
-2. **Interrupción**: El LSM110A sale del modo de bajo consumo (STOP/Sleep) vía EXTI
-3. **Transmisión**: Se envía un mensaje Sigfox (payload de 12 bytes máx.) con ID del evento
-4. **Entrega**: El backend Sigfox ejecuta un callback HTTP hacia el servidor de la app
-5. **Notificación**: La app móvil muestra la alerta con fecha, hora e ID del dispositivo
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    PCB Custom (< 40 × 30 mm)                 │
+│                                                              │
+│  CR2450 ──► [LDO bypass 0Ω] ──► VDD 3.0 V                   │
+│                    │              │                          │
+│                    │    ┌─────────┴──────────┐               │
+│                    │    │     LSM110A        │               │
+│  LIS2DW12 ◄──I2C──┤    │  STM32WL (Cortex-M4│               │
+│  (accel)  PA9/10   │    │  + radio sub-GHz)  │               │
+│    INT1 ──► PA0    │    │  Firmware API      │               │
+│                    │    │  Sigfox stack (SJI)│               │
+│  Reed/Hall ► PA1   │    └────────┬───────────┘               │
+│  (magnético)       │             │                           │
+│                    │         Pin 33 (RF 50 Ω)                │
+│  SWD header ◄── PA13/14         │                            │
+│  UART debug ◄── PB6/7     Antena PCB (diseño SJI)            │
+│                                                              │
+│  ──► Sigfox Cloud ──► Callback HTTP ──► App / Dashboard      │
+└─────────────────────────────────────────────────────────────┘
+```
 
-## Componentes Principales
+### Flujo de operación
 
-| Componente | Descripción | Referencia |
+1. **Detección.** El acelerómetro o el sensor magnético genera una interrupción de hardware.
+2. **Despierta.** El LSM110A sale del modo Stop2 vía EXTI.
+3. **Lectura.** Se leen sensores (accel via I²C, estado del magnético).
+4. **Transmisión.** Se arma el payload de 12 bytes y se envía un mensaje Sigfox.
+5. **Entrega.** El backend de Sigfox ejecuta un callback HTTP hacia el servidor de la app.
+6. **Notificación.** La app móvil muestra la alerta con timestamp e ID del dispositivo.
+
+## Componentes principales
+
+| Componente | Parte | Función |
 |---|---|---|
-| **SoC** | LSM110A (STM32WL core, Cortex-M4 + radio Sub-GHz) | [Support-SJI/LSM110A](https://github.com/Support-SJI/LSM110A) |
-| **Sensor** | Reed switch magnético (normalmente cerrado) | Sensor ABS puerta/ventana |
-| **Antena** | Antena Sigfox 868 MHz (PCB trace o chip antenna) | Por definir |
-| **Alimentación** | Batería (LiPo o CR2032, por evaluar) | Por definir |
-| **Programador** | ST-LINK externo o UART | STM32CubeProgrammer |
+| SoC + radio | **LSM110A** (STM32WL55) | MCU Cortex-M4 + radio Sigfox integrado |
+| Acelerómetro | **LIS2DW12** (I²C) | Detección de movimiento, INT1 → PA0 |
+| Sensor magnético A | **Reed switch NA** | Detección de apertura (opción A) |
+| Sensor magnético B | **DRV5032** (hall) | Detección de apertura (opción B) |
+| Batería | **CR2450** (3 V, 620 mAh) | Alimentación desechable |
+| Cap. soporte | 470 µF electrolítico | Soporte para el pulso de TX Sigfox |
+| LDO (opcional) | **TPS7A02** + bypass 0 Ω | Regulación opcional |
+| Antena | Traza PCB 50 Ω | Diseño SJI (certificado FCC) |
 
-## Plataforma de Desarrollo
+## Plataforma de desarrollo
 
-| Herramienta | Versión | Uso |
+| Herramienta | Uso |
+|---|---|
+| **STM32CubeIDE** | Desarrollo de firmware (C, bare-metal) |
+| **STM32CubeMX** | Configuración de periféricos y clocks |
+| **KiCad** | Diseño esquemático y PCB |
+| **ST-Link + SWD** | Programación y debug |
+| **Sigfox Backend** | Dashboard y callbacks |
+
+## Plan de milestones
+
+| Milestone | Entregable | Semana |
 |---|---|---|
-| STM32CubeIDE | v1.18.1+ | IDE principal de desarrollo |
-| STM32CubeMX | - | Configuración de periféricos (.ioc) |
-| STM32CubeProgrammer | v2.19.0 | Programación y verificación de firmware |
-| STM32CubeWL | v1.3.x | Paquete de firmware (HAL, BSP, stacks) |
+| **M0** | Repo + spec + CubeIDE setup | 1 |
+| **M1** | Esquemático KiCad | 2-3 |
+| **M2** | FW en Nucleo (accel + reed + Sigfox) | 2-3 |
+| **M3** | PCB layout + gerbers | 3-4 |
+| **M4** | Low power validado en Nucleo | 3-4 |
+| **M5** | PCB fabricada y ensamblada | 5-6 |
+| **M6** | Integración FW en PCB custom | 6-7 |
+| **M7** | Prueba de campo | 8 |
 
-## Estructura del Repositorio
+## Estructura del repositorio
 
 ```
 0G-LockControl-LSM110A/
 ├── Hardware/
-│   ├── Schematic/          # Esquemáticos del circuito (Altium/KiCad)
-│   ├── PCB/                # Diseño de la tarjeta de circuito impreso
-│   ├── BOM/                # Lista de materiales (Bill of Materials)
-│   └── Datasheets/         # Hojas de datos de componentes clave
+│   ├── kicad/             # Proyecto KiCad (esquemático + PCB)
+│   ├── Datasheets/        # Hojas de datos de componentes clave
+│   ├── Schematic/
+│   ├── PCB/
+│   └── BOM/
 ├── Firmware/
-│   ├── src/                # Código fuente principal (main.c, callbacks, etc.)
-│   ├── libs/               # Librerías externas y stacks (Sigfox, HAL)
-│   ├── config/             # Archivos de configuración (.ioc, linker scripts)
-│   └── tools/              # Scripts auxiliares (programación, pruebas)
+│   ├── sdk/               # Fork del SDK de SJI (LSM110A)
+│   ├── app/               # Código de aplicación
+│   ├── drivers/           # Drivers de sensores I2C
+│   ├── src/
+│   ├── libs/
+│   ├── config/
+│   └── tools/
 ├── 3D-Models/
-│   ├── Enclosure/          # Diseño de la carcasa (STL, STEP)
-│   └── Assembly/           # Ensamblaje completo del dispositivo
+│   ├── Enclosure/
+│   └── Assembly/
 ├── Tests/
-│   ├── Lab/                # Pruebas de laboratorio (RF, consumo, funcionales)
-│   └── Field/              # Pruebas de campo (instalaciones reales)
+│   ├── Lab/
+│   └── Field/
 ├── App/
-│   ├── Mobile/             # Aplicación móvil (Flutter/React Native)
-│   └── Backend/            # API y servidor para callbacks Sigfox
+│   ├── Mobile/
+│   └── Backend/
 ├── docs/
-│   ├── Architecture/       # Documentos de arquitectura y decisiones de diseño
-│   ├── Images/             # Diagramas, fotos, capturas
-│   ├── References/         # PDFs de referencia, application notes
-│   └── Guides/             # Guías de usuario, instalación, manufactura
+│   ├── spec-producto.md       # Especificación completa v1.0
+│   ├── decisiones-tecnicas.md # Decisiones arquitectónicas (ADRs)
+│   ├── pinout-lsm110a.md      # Asignación de pines
+│   ├── Architecture/
+│   ├── Images/
+│   ├── References/
+│   └── Guides/
 ├── .gitignore
-└── README.md               # Este archivo
+└── README.md
 ```
 
-## Antecedentes del Desarrollo
+## Antecedentes del desarrollo
 
-Este proyecto es una evolución del trabajo realizado con la placa **NUCLEO-WL55JC2**, donde se validaron los siguientes hitos:
+Este proyecto es la evolución del trabajo realizado con la placa **NUCLEO-WL55JC2**, donde se validaron los siguientes hitos:
 
-- Conexión exitosa a la red Sigfox (registro en backend, envío de mensajes)
-- Conexión exitosa a LORIOT vía LoRaWAN (validación de stack)
-- Implementación de detección de flanco con reed switch en PB1
-- Envío de payload Sigfox al detectar apertura (función `EnviarMensajeFranco`)
-- Caracterización del microcontrolador y periféricos del STM32WL55
-- Pruebas con comandos AT para Sigfox
+- Conexión exitosa a la red Sigfox (registro en backend, envío de mensajes).
+- Conexión exitosa a LORIOT vía LoRaWAN (validación de stack).
+- Implementación de detección de flanco con reed switch.
+- Envío de payload Sigfox al detectar apertura.
+- Caracterización del microcontrolador y periféricos del STM32WL55.
 
-La transición al **LSM110A** permite pasar de una placa de desarrollo a un SoC integrado, habilitando el diseño de una PCB compacta y de bajo costo para producción.
+La transición al **LSM110A** permite pasar de una placa de desarrollo a un SoC integrado, habilitando el diseño de una PCB compacta y de bajo costo para producción. El firmware se programa directamente sobre el STM32WL del módulo (firmware API), sin necesidad de MCU externo ni de comandos AT.
 
-## Protocolos de Comunicación
+## Protocolos de comunicación
 
-### Sigfox (Protocolo Principal)
-- **Zona**: RCZ2 (América Latina / México)
-- **Frecuencia**: 902 MHz (uplink)
-- **Mensajes**: Hasta 140 mensajes/día (uplink), 4 downlink/día
-- **Payload**: Máximo 12 bytes por mensaje
-- **Alcance**: Hasta 50 km en zona rural, 3-10 km en zona urbana
+### Sigfox (protocolo principal)
 
-### Comunicación Local (Futuro)
-- BLE (Bluetooth Low Energy) para activación y configuración desde la app móvil
+- **Zona:** RCZ2 (México / América Latina).
+- **Frecuencia:** 902-928 MHz uplink.
+- **Mensajes:** hasta 140 mensajes/día uplink, 4 downlink/día.
+- **Payload:** máximo 12 bytes por mensaje.
+- **Alcance:** hasta 50 km en zona rural, 3-10 km en zona urbana.
+- **Potencia TX:** configurable, default +14 dBm (~50 mA).
+
+### Comunicación local (futuro)
+
+- BLE (Bluetooth Low Energy) para activación y configuración desde la app móvil.
+
+## Documentación adicional
+
+- 📄 [Especificación de producto v1.0](./docs/spec-producto.md)
+- 📄 [Decisiones técnicas (ADRs)](./docs/decisiones-tecnicas.md)
+- 📄 [Asignación de pines del LSM110A](./docs/pinout-lsm110a.md)
 
 ## Empresa
 
-**0G IoT Net Solutions** - [iotnet.mx](https://iotnet.mx)
+**0G IoT Net Solutions** — [iotnet.mx](https://iotnet.mx)
 
 ## Desarrollador
 
-**José Francisco Díaz Figueroa** - Hardware Developer  
+**José Francisco Díaz Figueroa** — Hardware Developer
 jdiaz@iotnet.mx
 
 ## Referencias
 
 - [Documentación STM32WL Series](https://www.st.com/en/microcontrollers-microprocessors/stm32wl-series.html)
-- [Repositorio LSM110A](https://github.com/Support-SJI/LSM110A)
-- [Sigfox Build - Development](https://build.sigfox.com/development)
-- [Sigfox Build - Industrialization](https://build.sigfox.com/industrialization#the-sigfox-credentials)
+- [Repositorio LSM110A (Support-SJI)](https://github.com/Support-SJI/LSM110A)
+- [Sigfox Build — Development](https://build.sigfox.com/development)
+- [Sigfox Build — Industrialization](https://build.sigfox.com/industrialization#the-sigfox-credentials)
 - [STM32CubeWL GitHub](https://github.com/STMicroelectronics/STM32CubeWL)
 - [RF Board Layout Guide (AN5457)](https://www.st.com/resource/en/application_note/dm00660594.pdf)
 
 ## Licencia
 
-Por definir
+Por definir.
