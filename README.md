@@ -147,7 +147,7 @@ La transición al **LSM110A** permite pasar de una placa de desarrollo a un SoC 
 
 ## Documentación adicional
 
-- 📕 **[Especificación de producto v1.0 (PDF)](./docs/References/spec-producto-lsm110a-v1.pdf)** — versión entregable, lista para compartir
+- 📕 **[Especificación de producto v1.0 (PDF)](./docs/References/spec-producto-lsm110a-v1.pdf)
 - 📄 [Especificación de producto v1.0 (Markdown)](./docs/spec-producto.md)
 - 📄 [Decisiones técnicas (ADRs)](./docs/decisiones-tecnicas.md)
 - 📄 [Asignación de pines del LSM110A](./docs/pinout-lsm110a.md)
