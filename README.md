@@ -43,6 +43,30 @@ Sleep (3µA)  →  Wake por INT (accel o magnético)  →  Leer sensor
 5. **Entrega.** El backend de Sigfox ejecuta un callback HTTP hacia el servidor de la app.
 6. **Notificación.** La app móvil muestra la alerta con timestamp e ID del dispositivo.
 
+## Justificación de arquitectura y cumplimiento normativo
+
+Este dispositivo utiliza el LSM110A con **firmware API** — el código de aplicación corre directamente dentro del STM32WL del módulo, sin MCU externo. Esta es una variante oficial ofrecida por el fabricante SJI.
+
+**¿Por qué no se usa un MCU externo con comandos AT?**
+- Menor consumo (un solo MCU en sleep vs dos)
+- Menor tamaño (cumple objetivo <5cm)
+- Menor costo (~$2-4 USD menos por unidad)
+- Menor complejidad de firmware
+
+**¿Se pierden certificaciones?**
+No. La certificación Sigfox Verified cubre la capa de RF/protocolo, que es la misma en las versiones AT y API. Para nuestro producto final aplicaremos el enfoque modular de Sigfox Ready, que hereda la conformidad RF del módulo certificado. La FCC del módulo tampoco se afecta mientras no se modifique la capa de radio ni la antena.
+
+Ver documento completo: [docs/arquitectura-justificacion.md](docs/arquitectura-justificacion.md)
+
+### Certificaciones requeridas para comercialización
+
+| Certificación | Qué cubre | Estado |
+|---|---|---|
+| Sigfox Verified | RF y protocolo del módulo | ✅ Heredada del LSM110A |
+| Sigfox Ready | Rendimiento radiado del producto final | ☐ Post-MVP (prueba en lab acreditado) |
+| FCC | Radiofrecuencia (USA) | ✅ Heredada del LSM110A (ID: 2AS8LLSM110A) |
+| NOM-208 / IFT-008 | Regulación México 902-928 MHz | ☐ Post-MVP (homologación IFT) |
+
 ## Componentes principales
 
 | Componente | Parte | Función |
@@ -151,6 +175,7 @@ La transición al **LSM110A** permite pasar de una placa de desarrollo a un SoC 
 - 📄 [Especificación de producto v1.0 (Markdown)](./docs/spec-producto.md)
 - 📄 [Decisiones técnicas (ADRs)](./docs/decisiones-tecnicas.md)
 - 📄 [Asignación de pines del LSM110A](./docs/pinout-lsm110a.md)
+- 📄 [Justificación de arquitectura API + certificaciones](./docs/arquitectura-justificacion.md)
 
 ## Empresa
 

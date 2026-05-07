@@ -46,3 +46,27 @@ Registro de decisiones arquitectónicas del proyecto. Cada entrada documenta el 
 - **Fecha:** 2026-05-07
 - **Decisión:** NOM-208/IFT-008 aplica para 902-928 MHz. LSM110A tiene FCC + MRA México-USA. Gestionar después del MVP.
 - **Consecuencia:** No bloquea prototipado. Necesario para comercialización.
+
+## DT-009: Watchdog IWDG como red de seguridad
+- **Fecha:** 2026-05-07
+- **Contexto:** Con firmware API sin MCU externo, un bug en el código de aplicación puede colgar todo el sistema.
+- **Decisión:** Habilitar IWDG (Independent Watchdog) con timeout de 4 segundos. Refresh en el loop principal.
+- **Consecuencia:** El dispositivo se recupera automáticamente de cuelgues de firmware en máximo 4 segundos.
+
+## DT-010: Antena — diseño de referencia SJI sin modificaciones
+- **Fecha:** 2026-05-07
+- **Contexto:** La certificación FCC del LSM110A requiere usar exclusivamente la antena tipo traza PCB diseñada por SJI. Cualquier cambio de antena invalida la FCC.
+- **Decisión:** Copiar exactamente el diseño de antena del EVB de SJI. Agregar conector U.FL como opción de pruebas con jumper 0Ω.
+- **Consecuencia:** El layout de la antena PCB no puede modificarse sin re-certificar. El conector U.FL es solo para pruebas de desarrollo.
+- **Referencia:** FCC ID: 2AS8LLSM110A — fccid.io/2AS8LLSM110A
+
+## DT-011: Certificaciones — plan de cumplimiento
+- **Fecha:** 2026-05-07
+- **Contexto:** Para vender el dispositivo en México se necesitan: Sigfox Ready, NOM-208/IFT-008, y suscripción Sigfox.
+- **Decisión:** Todas las certificaciones se tramitan post-MVP. El diseño cumple desde ahora las condiciones para no invalidar certificaciones heredadas.
+- **Condiciones para preservar certificaciones:**
+  1. No modificar la stack de Sigfox del SDK de SJI
+  2. Usar antena PCB del diseño de referencia SJI
+  3. No cambiar frecuencia de operación (RC2, 902-928 MHz)
+  4. No exceder potencia máxima certificada (+22dBm)
+  5. Etiquetar producto con "Contains FCC ID: 2AS8LLSM110A"
