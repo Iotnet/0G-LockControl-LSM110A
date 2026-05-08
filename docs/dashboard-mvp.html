@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>0G LockControl — Plan MVP</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Space+Grotesk:wght@400;600;700&display=swap');
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Space Grotesk', sans-serif;
+    background: #0a0e17;
+    color: #e0e6ed;
+    padding: 20px;
+  }
+  h1 { font-size: 20px; font-weight: 700; color: #fff; margin-bottom: 4px; }
+  .subtitle { font-size: 12px; color: #64748b; margin-bottom: 20px; }
+  .legend { display: flex; gap: 16px; margin-bottom: 16px; flex-wrap: wrap; }
+  .legend-item { display: flex; align-items: center; gap: 6px; font-size: 11px; color: #94a3b8; }
+  .legend-dot { width: 10px; height: 10px; border-radius: 3px; flex-shrink: 0; }
+  .phase-header {
+    font-size: 12px; font-weight: 700; color: #f59e0b;
+    padding: 10px 0 6px 0; border-top: 1px solid #1e293b;
+    margin-top: 6px; letter-spacing: 0.5px; text-transform: uppercase;
+  }
+  .phase-header:first-of-type { border-top: none; margin-top: 0; }
+  .task-row {
+    display: grid; grid-template-columns: 230px 1fr;
+    align-items: center; min-height: 40px;
+    border-bottom: 1px solid #151d2e; cursor: pointer; transition: background 0.15s;
+  }
+  .task-row:hover { background: #111827; }
+  .task-info { display: flex; flex-direction: column; padding: 4px 8px 4px 0; }
+  .task-name { font-size: 11px; font-weight: 600; color: #e2e8f0; line-height: 1.3; }
+  .task-owner { font-size: 10px; font-family: 'JetBrains Mono', monospace; color: #64748b; }
+  .task-bar-container { position: relative; height: 26px; }
+  .week-grid {
+    position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+    display: grid; grid-template-columns: repeat(12, 1fr);
+  }
+  .week-line { border-left: 1px solid #1a2234; }
+  .task-bar {
+    position: absolute; height: 20px; top: 3px; border-radius: 4px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 9px; font-family: 'JetBrains Mono', monospace; font-weight: 700;
+    color: rgba(255,255,255,0.9); transition: all 0.2s; cursor: pointer;
+    min-width: 20px;
+  }
+  .task-bar:hover { filter: brightness(1.2); transform: scaleY(1.15); }
+  .bar-lead { background: linear-gradient(135deg, #3b82f6, #2563eb); }
+  .bar-persona { background: linear-gradient(135deg, #10b981, #059669); }
+  .bar-ambos { background: linear-gradient(135deg, #f59e0b, #d97706); }
+  .bar-external { background: linear-gradient(135deg, #6366f1, #4f46e5); }
+  .week-header { display: grid; grid-template-columns: 230px 1fr; margin-bottom: 4px; }
+  .week-labels { display: grid; grid-template-columns: repeat(12, 1fr); text-align: center; }
+  .week-label {
+    font-size: 9px; font-family: 'JetBrains Mono', monospace; color: #475569; padding: 4px 0;
+  }
+  .week-label.current { color: #f59e0b; font-weight: 700; }
+  .milestone-labels { display: grid; grid-template-columns: 230px 1fr; margin-bottom: 8px; }
+  .milestone-bar { display: grid; grid-template-columns: repeat(12, 1fr); }
+  .ms-marker {
+    font-size: 8px; font-family: 'JetBrains Mono', monospace; color: #f59e0b;
+    text-align: center; font-weight: 700;
+  }
+  .detail-panel {
+    display: none; background: #111827; border: 1px solid #1e293b;
+    border-radius: 8px; padding: 12px; margin: 4px 0 8px 0;
+    font-size: 11px; line-height: 1.6; animation: slideDown 0.2s ease;
+  }
+  .detail-panel.active { display: block; }
+  @keyframes slideDown { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: translateY(0); } }
+  .detail-panel h3 { font-size: 13px; color: #f59e0b; margin-bottom: 6px; }
+  .detail-panel .checklist { list-style: none; padding: 0; }
+  .detail-panel .checklist li { padding: 2px 0; color: #94a3b8; }
+  .detail-panel .checklist li::before { content: '☐ '; color: #475569; }
+  .detail-panel .blocker { color: #f87171; font-weight: 600; margin-top: 8px; font-size: 11px; }
+  .summary-box {
+    background: #111827; border: 1px solid #1e293b; border-radius: 8px;
+    padding: 14px; margin-top: 20px; display: grid; grid-template-columns: 1fr 1fr; gap: 14px;
+  }
+  .summary-col h3 { font-size: 13px; font-weight: 700; margin-bottom: 6px; }
+  .summary-col.lead h3 { color: #3b82f6; }
+  .summary-col.persona h3 { color: #10b981; }
+  .summary-col ul { list-style: none; padding: 0; }
+  .summary-col li { font-size: 11px; color: #94a3b8; padding: 2px 0; font-family: 'JetBrains Mono', monospace; }
+  .cad-note {
+    background: #1a1f2e; border: 1px solid #2d3748; border-radius: 8px;
+    padding: 12px; margin-top: 16px; font-size: 11px; color: #94a3b8;
+  }
+  .cad-note strong { color: #60a5fa; }
+</style>
+</head>
+<body>
+<h1>0G LockControl — Plan de ejecucion MVP</h1>
+<p class="subtitle">12 semanas · 2 personas · Hardware (EasyEDA) + Firmware en paralelo · Clic en tarea = checklist</p>
+<div class="legend">
+  <div class="legend-item"><div class="legend-dot" style="background:#3b82f6"></div>Tu (Lead — HW)</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#10b981"></div>Tu persona (FW)</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#f59e0b"></div>Ambos</div>
+  <div class="legend-item"><div class="legend-dot" style="background:#6366f1"></div>Externo (fabrica)</div>
+</div>
+<div class="week-header">
+  <div></div>
+  <div class="week-labels" id="weekLabels"></div>
+</div>
+<div id="gantt"></div>
+<div class="cad-note">
+  <strong>CAD:</strong> EasyEDA (Pro o Standard). Ventaja: integrado con LCSC/JLCPCB para componentes y fabricacion directa. El LSM110A necesita footprint custom (14x15mm half-through-hole) — se crea en EasyEDA Footprint Editor.
+</div>
+<div class="summary-box">
+  <div class="summary-col lead">
+    <h3>Tu (Lead) — Semana 1-2</h3>
+    <ul>
+      <li>-> Ejecutar prompts Cowork (repo)</li>
+      <li>-> Crear footprint LSM110A en EasyEDA</li>
+      <li>-> Descargar datasheets al repo</li>
+      <li>-> Conseguir CR2450 + cap 470uF</li>
+      <li>-> Medir pulso TX con osciloscopio</li>
+    </ul>
+  </div>
+  <div class="summary-col persona">
+    <h3>Tu persona — Semana 1-2</h3>
+    <ul>
+      <li>-> Clonar repo Support-SJI/LSM110A</li>
+      <li>-> Compilar SDK en CubeIDE (0 errores)</li>
+      <li>-> Flashear Nucleo WL55JC</li>
+      <li>-> Verificar TX Sigfox en backend</li>
+      <li>-> Probar cobertura en sitio real</li>
+    </ul>
+  </div>
+</div>
+<script>
+const TOTAL_WEEKS = 12;
+const tasks = [
+  { phase: "M0: SEMANA 1-2 — Setup, repo y validacion de GATES" },
+  { name: "Ejecutar prompts Cowork (actualizar repo)", owner: "Tu (Lead)", type: "lead", start: 0, end: 1,
+    detail: ["Ejecutar prompt 1: spec, README, pinout, estructura", "Ejecutar prompt 2: arquitectura y normas", "Subir spec-producto-v1.md y .docx", "Verificar que el repo quedo correcto", "Descargar datasheets a Hardware/Datasheets/"] },
+  { name: "Clonar SDK SJI + compilar en CubeIDE", owner: "Tu persona", type: "persona", start: 0, end: 1,
+    detail: ["git clone github.com/Support-SJI/LSM110A", "Abrir proyecto en STM32CubeIDE", "Compilar — debe dar 0 errores", "Entender estructura del SDK: capas, carpetas", "Identificar donde va el codigo de aplicacion (app layer)"] },
+  { name: "GATE 1: Flashear Nucleo + validar TX Sigfox", owner: "Tu persona", type: "persona", start: 1, end: 2,
+    detail: ["Flashear binario al Nucleo WL55JC por SWD", "Verificar mensaje llega al backend Sigfox", "Documentar: zona RC2, device ID, PAC", "Probar TX desde sitio real de instalacion", "Probar TX desde cuarto frio (si aplica)"],
+    blocker: "GATE 1: Si no hay cobertura Sigfox en sitio real, el proyecto se detiene. Resolver antes de avanzar." },
+  { name: "Crear simbolo + footprint LSM110A en EasyEDA", owner: "Tu (Lead)", type: "lead", start: 1, end: 2,
+    detail: ["Crear footprint custom: 14x15mm half-through-hole", "34 pads segun datasheet sec. 5.3", "Pad central GND (thermal pad)", "Crear simbolo con pines agrupados por funcion", "Verificar contra dimensiones del datasheet", "Buscar en LCSC: LIS2DW12, DRV5032, TPS7A02", "Verificar stock y precios de todos los componentes"] },
+  { name: "GATE 2: Medir pulso TX con CR2450 + cap 470uF", owner: "Ambos", type: "ambos", start: 1.5, end: 2,
+    detail: ["Conectar CR2450 + cap 470uF al Nucleo", "Transmitir Sigfox a +14dBm", "Medir VDD con osciloscopio durante TX (~2 seg)", "Registrar: voltaje minimo, duracion del dip", "Si VDD < 1.8V -> probar cap mas grande o CR2477"],
+    blocker: "GATE 2: Si CR2450 no aguanta pulso, redefinir bateria ANTES de esquematico." },
+  { phase: "M1+M2: SEMANA 2-5 — Esquematico + Firmware sensores (PARALELO)" },
+  { name: "Esquematico completo en EasyEDA", owner: "Tu (Lead)", type: "lead", start: 2, end: 5,
+    detail: ["Bloque alimentacion: CR2450 -> TPS7A02 bypass 0ohm -> VDD", "Cap soporte 470uF en paralelo a VDD", "LSM110A + desacoplo (100nF x4 + 10uF)", "LIS2DW12 en I2C (PA9 SCL, PA10 SDA) + pullups 4.7kohm", "Reed switch footprint (PA1 EXTI1) con pull-up", "DRV5032 hall footprint (PA1 EXTI1) alternativo", "Header SWD 4 pines: VDD, SWDIO, SWCLK, GND", "UART debug pads: PB6 TX, PB7 RX (no poblar prod)", "LED debug: PA2 -> 1kohm -> LED (no poblar prod)", "NRST: cap 100nF a GND", "BOOT0: sin conectar (pulldown interno)", "Pin 33 RFOUT -> traza 50ohm -> antena PCB (diseno SJI)", "Conector U.FL opcional con jumper 0ohm (solo pruebas)", "Revision cruzada: tu persona revisa el esquematico", "ERC check -> 0 errores"] },
+  { name: "Driver LIS2DW12 (acelerometro I2C)", owner: "Tu persona", type: "persona", start: 2, end: 4,
+    detail: ["Configurar I2C1 en CubeMX: PA9=SCL, PA10=SDA, 400kHz", "Implementar I2C read/write basico", "Leer WHO_AM_I register -> debe ser 0x44", "Configurar ODR (Output Data Rate) bajo para ahorro", "Configurar wake-up threshold: 200mg", "Configurar INT1 route a wake-up en PA0 (EXTI)", "ISR: leer STATUS register para confirmar evento", "Leer magnitud de aceleracion (X, Y, Z)", "Calcular eje dominante", "Probar: golpear mesa -> INT1 dispara -> leer datos", "Medir consumo del accel en modo low-power monitor"] },
+  { name: "Driver sensor magnetico (GPIO EXTI)", owner: "Tu persona", type: "persona", start: 3.5, end: 4.5,
+    detail: ["Configurar PA1 como EXTI input (rising + falling)", "Pull-up interno para reed switch (NC->NA al abrir)", "ISR: leer estado del pin para saber abierto/cerrado", "Debounce software: ignorar eventos < 50ms", "Probar con reed switch + iman de neodimio", "Verificar que EXTI despierta MCU de Stop2", "Documentar distancia maxima iman-reed para activar"] },
+  { name: "Integracion: sensores + Sigfox TX + payload", owner: "Tu persona", type: "persona", start: 4, end: 5,
+    detail: ["Implementar alarm_logic.c: decide cuando transmitir", "Armar payload 12 bytes segun spec seccion 4.4", "Byte 0: tipo (0x01=alarma, 0x02=heartbeat)", "Byte 1: fuente (bit0=accel, bit1=magnetico)", "Bytes 2-3: magnitud aceleracion (uint16 BE)", "Byte 4: eje dominante", "Byte 5: estado magnetico (0=cerrado, 1=abierto)", "Implementar cooldown 60 segundos entre TX", "Implementar contador diario max 130 msgs", "Llamar SDK SJI para TX -> verificar en backend", "Parsear payload en Sigfox callbacks para validar"] },
+  { phase: "M3: SEMANA 5-7 — PCB Layout (PARALELO con bajo consumo)" },
+  { name: "PCB layout 2 capas en EasyEDA", owner: "Tu (Lead)", type: "lead", start: 5, end: 7,
+    detail: ["Board outline: objetivo < 40x30mm", "Stackup: FR4 1.6mm, 2 capas, 1oz copper", "Placement: LSM110A centrado, antena en borde", "Capa bottom: plano GND solido — SIN CORTES bajo modulo ni antena", "Traza RF: microstrip 50ohm (~2.8mm ancho para FR4 1.6mm)", "Usar calculadora de impedancia EasyEDA para verificar", "Copiar diseno antena PCB del EVB SJI exactamente", "Keepout zone alrededor de la antena (sin cobre/componentes)", "Caps de desacoplo: lo mas cerca posible de VDD pin", "Via stitching alrededor de la zona RF", "Silk: nombre proyecto, version, pinout SWD, polaridad bat", "DRC -> 0 errores", "Generar gerbers + BOM + pick and place", "Vista 3D: verificar clearances y fit mecanico", "Revision cruzada: tu persona revisa layout", "Exportar BOM compatible LCSC para pedido directo"] },
+  { phase: "M4: SEMANA 7-8 — Low power + testing firmware completo" },
+  { name: "Implementar Stop2 + RTC + watchdog", owner: "Tu persona", type: "persona", start: 5, end: 7,
+    detail: ["Configurar modo Stop2 en CubeMX", "Configurar RTC con LSE 32.768kHz", "RTC alarm A cada 24h -> heartbeat automatico", "Verificar wake-up por RTC -> transmite heartbeat", "Verificar wake-up por EXTI PA0 (accel INT1)", "Verificar wake-up por EXTI PA1 (magnetico)", "Re-inicializar clocks y perifericos post-wake", "Habilitar IWDG: timeout 4 seg, refresh en main loop", "Probar: desconectar debugger -> funciona standalone?"] },
+  { name: "Heartbeat + battery monitor + config", owner: "Tu persona", type: "persona", start: 7, end: 7.5,
+    detail: ["Heartbeat payload: bateria% + temp + conteo eventos", "ADC canal interno (VREFINT) -> calcular VBAT", "Mapear: 3.0V=100%, 2.0V=0%", "Leer temperatura del LIS2DW12 (registro integrado)", "Resetear contador de eventos en cada heartbeat", "Implementar device_config_t struct", "Guardar config en flash (una pagina dedicada)", "Cargar config al boot"] },
+  { name: "Testing exhaustivo firmware en Nucleo", owner: "Tu persona", type: "persona", start: 7.5, end: 8,
+    detail: ["Test completo: wake accel -> TX -> sleep -> wake reed -> TX -> sleep", "Simular 48h de operacion continua", "Verificar contador diario se resetea a medianoche", "Verificar cooldown 60s entre eventos rapidos", "Probar 140+ eventos en un dia -> para a 130?", "Medir consumo sleep real: ~3uA?", "Medir consumo TX real: ~50mA a +14dBm?", "Probar watchdog: meter delay infinito -> resetea en 4s?", "Documentar resultados en Tests/Lab/"] },
+  { phase: "M5: SEMANA 8-11 — Fabricacion PCB + ensamble" },
+  { name: "Revisar gerbers + pedir PCB + componentes", owner: "Tu (Lead)", type: "lead", start: 7, end: 8,
+    detail: ["Revision visual gerbers en EasyEDA viewer 3D", "Verificar drill sizes, clearances, silk legible", "Pedir PCB directamente desde EasyEDA -> JLCPCB", "2 capas, FR4 1.6mm, HASL, verde", "Pedir 5-10 unidades (margen para errores)", "Pedir componentes desde LCSC (integrado en EasyEDA)", "Verificar stock: LSM110A, LIS2DW12, DRV5032, TPS7A02", "Pedir CR2450 + holders por separado si no hay en LCSC"] },
+  { name: "Fabricacion + envio PCB", owner: "Fabrica (JLCPCB)", type: "external", start: 8, end: 10,
+    detail: ["~5-7 dias fabricacion PCB", "~7-14 dias envio a Mexico (DHL o ePacket)", "JLCPCB SMT assembly disponible si quieres que suelden pasivos", "Total: ~2-3 semanas"] },
+  { name: "Ensamblar prototipo PCB", owner: "Tu (Lead)", type: "lead", start: 10, end: 11,
+    detail: ["Soldar LSM110A: half-through-hole con aire caliente", "Temperatura: pico 240C +/-5C segun datasheet", "Soldar pasivos 0402/0603 con cautin fino o pasta+reflow", "Soldar LIS2DW12 LGA-12: pasta de soldadura + aire caliente", "Soldar DRV5032 SOT-23 (y/o reed switch THT)", "Soldar header SWD 1.27mm", "Instalar CR2450 en holder", "Inspeccion visual con lupa / microscopio USB", "Verificar continuidad en pines criticos: VDD, GND, SWD"] },
+  { phase: "M6: SEMANA 11-12 — Integracion + validacion HW" },
+  { name: "Validacion HW + flash firmware", owner: "Ambos", type: "ambos", start: 11, end: 11.5,
+    detail: ["Sin bateria: alimentar por SWD (3.3V del ST-Link)", "Medir VDD: 3.3V del ST-Link llega correcto?", "Continuidad GND en todos los pines (1,10,12,20,23,32,34)", "Conectar ST-Link -> STM32CubeProgrammer detecta chip?", "Flashear firmware (ya validado en Nucleo)", "LED debug parpadea? (PA2)", "UART debug muestra output? (PB6 TX)", "Instalar CR2450 -> VDD = ~3.0V?", "I2C scan detecta LIS2DW12 en 0x19?", "Magnetico detecta iman? (PA1 EXTI)", "TX Sigfox exitoso? -> verificar en backend", "Medir consumo sleep en PCB real con multimetro uA"] },
+  { name: "Debug + correcciones + documentacion", owner: "Ambos", type: "ambos", start: 11.5, end: 12,
+    detail: ["Si SWD no conecta -> verificar PA13/PA14 continuidad", "Si I2C no detecta -> verificar pullups y conexiones", "Si TX falla -> verificar traza 50ohm y antena con VNA si disponible", "Si consumo alto en sleep -> verificar GPIOs flotantes", "Ajustar firmware si hay diferencias PCB vs Nucleo", "Medir VDD durante TX con CR2450 real (osciloscopio)", "Documentar quirks y workarounds en docs/", "Si PCB tiene errores graves -> evaluar rework o re-spin"] },
+  { phase: "M7: SEMANA 12 — Prueba de campo" },
+  { name: "Instalar prototipo en sitio real (5-7 dias)", owner: "Ambos", type: "ambos", start: 12, end: 12,
+    detail: ["Instalar en puerta/ventana real con iman neodimio", "Verificar deteccion apertura (magnetico) -> alerta en backend", "Verificar deteccion movimiento (acelerometro) -> alerta", "Verificar heartbeat llega cada 24h", "Verificar nivel de bateria reportado es razonable", "Monitorear por 5-7 dias", "Contar falsos positivos del acelerometro", "Verificar alcance Sigfox: llegan todos los mensajes?", "Medir: bateria bajo cuanto en 7 dias?", "Documentar todo en Tests/Field/", "RESULTADO: MVP validado -> plan para produccion", "O: lista de correcciones -> v2 del PCB"] },
+];
+const weekLabels = document.getElementById('weekLabels');
+for (let i = 1; i <= TOTAL_WEEKS; i++) {
+  const l = document.createElement('div');
+  l.className = 'week-label' + (i <= 2 ? ' current' : '');
+  l.textContent = 'S' + i;
+  weekLabels.appendChild(l);
+}
+const gantt = document.getElementById('gantt');
+tasks.forEach((task) => {
+  if (task.phase) {
+    const ph = document.createElement('div');
+    ph.className = 'phase-header';
+    ph.textContent = task.phase;
+    gantt.appendChild(ph);
+    return;
+  }
+  const row = document.createElement('div');
+  row.className = 'task-row';
+  const barClass = { lead:'bar-lead', persona:'bar-persona', ambos:'bar-ambos', external:'bar-external' }[task.type];
+  const leftPct = (task.start / TOTAL_WEEKS) * 100;
+  const widthPct = (Math.max(task.end - task.start, 0.4) / TOTAL_WEEKS) * 100;
+  const startW = Math.floor(task.start) + 1;
+  const endW = Math.ceil(task.end);
+  const label = startW === endW ? 'S' + startW : 'S' + startW + '-' + endW;
+  row.innerHTML =
+    '<div class="task-info">' +
+      '<div class="task-name">' + task.name + '</div>' +
+      '<div class="task-owner">' + task.owner + '</div>' +
+    '</div>' +
+    '<div class="task-bar-container">' +
+      '<div class="week-grid">' + '<div class="week-line"></div>'.repeat(TOTAL_WEEKS) + '</div>' +
+      '<div class="task-bar ' + barClass + '" style="left:' + leftPct + '%;width:' + widthPct + '%">' + label + '</div>' +
+    '</div>';
+  gantt.appendChild(row);
+  const detail = document.createElement('div');
+  detail.className = 'detail-panel';
+  let html = '<h3>' + task.name + '</h3><ul class="checklist">';
+  (task.detail || []).forEach(function(d) { html += '<li>' + d + '</li>'; });
+  html += '</ul>';
+  if (task.blocker) html += '<div class="blocker">' + task.blocker + '</div>';
+  detail.innerHTML = html;
+  gantt.appendChild(detail);
+  row.addEventListener('click', function() {
+    const wasActive = detail.classList.contains('active');
+    document.querySelectorAll('.detail-panel.active').forEach(function(p) { p.classList.remove('active'); });
+    if (!wasActive) detail.classList.add('active');
+  });
+});
+</script>
+</body>
+</html>
