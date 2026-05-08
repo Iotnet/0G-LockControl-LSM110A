@@ -103,6 +103,8 @@ Ver documento completo: [docs/arquitectura-justificacion.md](docs/arquitectura-j
 | **M6** | Integración FW en PCB custom | 11-12 |
 | **M7** | Prueba de campo | 12 |
 
+> **[Ver dashboard interactivo del plan MVP](https://jdiaznxt.github.io/0G-LockControl-LSM110A/docs/dashboard-mvp.html)** — Gantt con checklist por tarea, clic para expandir detalles.
+
 ## Estructura del repositorio
 
 ```
