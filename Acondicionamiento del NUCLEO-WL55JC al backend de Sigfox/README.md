@@ -48,6 +48,12 @@ Empresa operadora: **0G IoT Solutions** — [0giotsolutions.com](https://0giotso
 | **Delay backend** | 3.2 s |
 | **Versiones firmware** | APP V1.5.0 · MW_SIGFOX V1.8.0 · MW_RADIO V1.4.0 |
 
+
+<img width="2880" height="1540" alt="image" src="https://github.com/user-attachments/assets/184f2bf5-8c28-4611-806a-999ac2885c12" />
+
+
+
+
 ---
 
 # Requisitos
