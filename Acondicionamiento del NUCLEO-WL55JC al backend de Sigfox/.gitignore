@@ -1,0 +1,29 @@
+# macOS
+.DS_Store
+._*
+.Spotlight-V100
+.Trashes
+
+# LaTeX auxiliares
+*.aux
+*.log
+*.out
+*.toc
+*.fls
+*.fdb_latexmk
+*.synctex.gz
+*.bbl
+*.blg
+
+# Editores
+.vscode/
+.idea/
+*.swp
+*~
+
+# Credenciales — NUNCA subir
+*.bin
+*chip_cert*
+*sigfox_data*
+credentials*.zip
+sigfox_credentials*
