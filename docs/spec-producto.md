@@ -101,14 +101,14 @@ typedef struct {
 
 | Milestone | Entregable | Semana | Responsable |
 |-----------|-----------|--------|-------------|
-| M0 | Repo + spec + CubeIDE setup | 1 | Ambos |
-| M1 | Esquemático KiCad | 2-3 | Tú |
-| M2 | FW en Nucleo (accel+reed+Sigfox) | 2-3 | Tu persona |
-| M3 | PCB layout + gerbers | 3-4 | Tú |
-| M4 | Low power validado en Nucleo | 3-4 | Tu persona |
-| M5 | PCB fabricada y ensamblada | 5-6 | Fábrica |
-| M6 | Integración FW en PCB custom | 6-7 | Ambos |
-| M7 | Prueba de campo (1 semana) | 8 | Ambos |
+| M0 | Repo + spec + CubeIDE setup | 1-2 | Ambos |
+| M1 | Esquemático KiCad | 2-5 | Tú |
+| M2 | FW en Nucleo (accel+reed+Sigfox) | 2-5 | Tu persona |
+| M3 | PCB layout + gerbers | 5-7 | Tú |
+| M4 | Low power validado en Nucleo | 7-8 | Tu persona |
+| M5 | PCB fabricada y ensamblada | 8-11 | Fábrica |
+| M6 | Integración FW en PCB custom | 11-12 | Ambos |
+| M7 | Prueba de campo | 12 | Ambos |
 
 ## 7. Siguientes pasos (esta semana)
 
