@@ -1,0 +1,33 @@
+# Modificacion en STM32CubeIDE/.project
+# Necesario porque STM32CubeIDE usa linked resources: cada archivo .c
+# del proyecto se declara individualmente en .project. Si un archivo
+# nuevo se pone en el filesystem pero no se lista aqui, CubeIDE NO lo
+# incluye en el build (linker tira "undefined reference").
+
+--- a/STM32CubeIDE/.project
++++ b/STM32CubeIDE/.project
+@@ -XX,10 +XX,15 @@
+ 		<link>
+ 			<name>Application/User/Sigfox/App/app_sigfox.c</name>
+ 			<type>1</type>
+ 			<locationURI>PARENT-1-PROJECT_LOC/Sigfox/App/app_sigfox.c</locationURI>
+ 		</link>
++		<link>
++			<name>Application/User/Sigfox/App/buttons_app.c</name>
++			<type>1</type>
++			<locationURI>PARENT-1-PROJECT_LOC/Sigfox/App/buttons_app.c</locationURI>
++		</link>
+ 		<link>
+ 			<name>Application/User/Sigfox/App/ee.c</name>
+ 			<type>1</type>
+ 			<locationURI>PARENT-1-PROJECT_LOC/Sigfox/App/ee.c</locationURI>
+ 		</link>
+
+# Que hace:
+#   - Agrega un nodo <link> apuntando a Sigfox/App/buttons_app.c para
+#     que CubeIDE lo compile como parte del proyecto Sigfox_AT_Slave.
+#   - El header buttons_app.h NO necesita link porque los headers se
+#     resuelven via include paths, no via linked resources.
+#   - El type=1 indica archivo (type=2 seria carpeta).
+#   - locationURI usa PARENT-1-PROJECT_LOC (raiz del proyecto es un
+#     nivel arriba del .project).

@@ -1,0 +1,20 @@
+# Modificacion en Core/Inc/utilities_def.h
+# Agregar la nueva tarea del sequencer para los botones B1/B2/B3.
+# Se coloca dentro de los marcadores USER CODE para respetar la convencion de CubeMX.
+
+--- a/Core/Inc/utilities_def.h
++++ b/Core/Inc/utilities_def.h
+@@ -77,7 +77,7 @@ typedef enum
+   CFG_SEQ_Task_Vcom,
+   CFG_SEQ_Task_Monarch,
+   /* USER CODE BEGIN CFG_SEQ_Task_Id_t */
+-
++  CFG_SEQ_Task_ButtonTx,  /* Tarea disparada por los push-buttons B1/B2/B3 */
+   /* USER CODE END CFG_SEQ_Task_Id_t */
+   CFG_SEQ_Task_NBR
+ } CFG_SEQ_Task_Id_t;
+
+# Que hace: agrega un ID (CFG_SEQ_Task_ButtonTx) al enum de tareas del
+# UtilitiesSequencer (stm32_seq). Este ID sirve como bitmask para
+# registrar y disparar la tarea que ejecuta SIGFOX_API_send_frame()
+# cuando alguno de los botones es presionado.

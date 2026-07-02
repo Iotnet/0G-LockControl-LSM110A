@@ -1,0 +1,34 @@
+# Modificacion en Sigfox/App/sgfx_app.c
+# Agregar el include del modulo de botones y su inicializacion al final
+# del Sigfox_Init(). Se conservan los marcadores USER CODE para no
+# romper la regeneracion desde CubeMX.
+
+--- a/Sigfox/App/sgfx_app.c
++++ b/Sigfox/App/sgfx_app.c
+@@ -33,7 +33,7 @@
+ #include "sgfx_command.h"
+ #include "flash_if.h"
+ /* USER CODE BEGIN Includes */
+-
++#include "buttons_app.h"
+ /* USER CODE END Includes */
+
+@@ -160,5 +160,7 @@ void Sigfox_Init(void)
+
+   /* USER CODE BEGIN Sigfox_Init_2 */
+-
++  /* Inicializa el modulo de push-buttons B1/B2/B3 para envios Sigfox
++     adicionales (en paralelo a la interfaz AT). */
++  Buttons_Init();
+   /* USER CODE END Sigfox_Init_2 */
+ }
+
+# Que hace:
+#   - Incluye el header buttons_app.h para acceder a la API publica del
+#     modulo (Buttons_Init, Buttons_HandleEXTI).
+#   - Llama Buttons_Init() al final de Sigfox_Init(), DESPUES de que el
+#     stack Sigfox este abierto y de que la tarea Vcom este registrada.
+#     Esta llamada se encarga de:
+#       - habilitar NVIC para EXTI0/EXTI1/EXTI9_5,
+#       - registrar la tarea del sequencer (CFG_SEQ_Task_ButtonTx),
+#       - imprimir el banner de "BOTONES LISTOS" en el VCP.
