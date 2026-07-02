@@ -16,6 +16,7 @@ void lis2dw12_init_handle(lis2dw12_t *dev, I2C_HandleTypeDef *hi2c)
     if (dev == NULL) return;
     dev->hi2c = hi2c;
     dev->i2c_timeout_ms = 100;
+    dev->event_pending = false;
 }
 
 lis2dw12_status_t lis2dw12_read_reg(lis2dw12_t *dev, uint8_t reg, uint8_t *val)
@@ -95,4 +96,40 @@ lis2dw12_status_t lis2dw12_config_wakeup(lis2dw12_t *dev, uint16_t threshold_mg)
 lis2dw12_status_t lis2dw12_read_wake_source(lis2dw12_t *dev, uint8_t *src)
 {
     return lis2dw12_read_reg(dev, LIS2DW12_REG_WAKE_UP_SRC, src);
+}
+
+/* ---------- ISR / app loop ---------- */
+
+void lis2dw12_on_interrupt(lis2dw12_t *dev)
+{
+    if (dev == NULL) return;
+    /* ISR context: solo marca el flag, NO hagas I2C aqui. */
+    dev->event_pending = true;
+}
+
+bool lis2dw12_has_pending_event(lis2dw12_t *dev)
+{
+    return (dev != NULL) && dev->event_pending;
+}
+
+lis2dw12_status_t lis2dw12_process_event(lis2dw12_t *dev, lis2dw12_event_t *evt)
+{
+    if (dev == NULL) return LIS2DW12_ERR_PARAM;
+
+    uint8_t src = 0;
+    lis2dw12_status_t s = lis2dw12_read_wake_source(dev, &src);
+
+    /* Limpia el flag haya error o no — si quedo set, la app puede reintentar */
+    dev->event_pending = false;
+
+    if (s != LIS2DW12_OK) return s;
+
+    if (evt != NULL) {
+        evt->raw_src  = src;
+        evt->detected = (src & LIS2DW12_WU_SRC_WU_IA) != 0;
+        evt->axis_x   = (src & LIS2DW12_WU_SRC_X) != 0;
+        evt->axis_y   = (src & LIS2DW12_WU_SRC_Y) != 0;
+        evt->axis_z   = (src & LIS2DW12_WU_SRC_Z) != 0;
+    }
+    return LIS2DW12_OK;
 }

@@ -76,6 +76,7 @@ typedef enum {
 typedef struct {
     I2C_HandleTypeDef *hi2c;     /* p.ej. &hi2c1 */
     uint16_t i2c_timeout_ms;     /* default 100 */
+    volatile bool event_pending; /* set por ISR, limpiado en process_event */
 } lis2dw12_t;
 
 /* ---------- API ---------- */
@@ -112,5 +113,38 @@ lis2dw12_status_t lis2dw12_read_wake_source(lis2dw12_t *dev, uint8_t *src);
 /* Helpers raw I2C (expuestos para debug) */
 lis2dw12_status_t lis2dw12_read_reg(lis2dw12_t *dev, uint8_t reg, uint8_t *val);
 lis2dw12_status_t lis2dw12_write_reg(lis2dw12_t *dev, uint8_t reg, uint8_t val);
+
+/* ---------- API de interrupcion (PA0 EXTI0) ---------- */
+
+/**
+ * @brief Estructura de un evento de wake-up procesado.
+ */
+typedef struct {
+    bool detected;        /* true si WU_IA estaba set */
+    bool axis_x;          /* eje X disparo */
+    bool axis_y;          /* eje Y disparo */
+    bool axis_z;          /* eje Z disparo */
+    uint8_t raw_src;      /* registro WAKE_UP_SRC crudo */
+} lis2dw12_event_t;
+
+/**
+ * @brief Llamar desde HAL_GPIO_EXTI_Callback cuando GPIO_Pin == GPIO_PIN_0.
+ *        NO hace I2C — solo marca un flag para procesarlo en main loop.
+ *        Diseno seguro para contexto ISR.
+ */
+void lis2dw12_on_interrupt(lis2dw12_t *dev);
+
+/**
+ * @brief Devuelve true si hay un evento pendiente. NO lo limpia.
+ */
+bool lis2dw12_has_pending_event(lis2dw12_t *dev);
+
+/**
+ * @brief Procesa el evento pendiente: lee WAKE_UP_SRC por I2C y limpia el flag.
+ *        Llamar desde main loop / task, NO desde ISR.
+ *
+ * @param[out] evt Resultado decodificado. Puede ser NULL si no interesa.
+ */
+lis2dw12_status_t lis2dw12_process_event(lis2dw12_t *dev, lis2dw12_event_t *evt);
 
 #endif /* LIS2DW12_H */

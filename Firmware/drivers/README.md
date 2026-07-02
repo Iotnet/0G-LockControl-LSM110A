@@ -2,72 +2,143 @@
 
 Drivers de bajo nivel para los sensores del 0G LockControl LSM110A.
 
-## LIS2DW12 (acelerometro)
+## Archivos
 
-Archivo: `lis2dw12.c` / `lis2dw12.h`
+| Archivo | Sensor | Pin | Funcion |
+|---|---|---|---|
+| `lis2dw12.c/.h` | Acelerometro LIS2DW12 | PA0 (INT1) + PA9/PA10 (I2C1) | Wake-up por movimiento |
+| `reed_switch.c/.h` | Reed switch / DRV5032 | PA1 (EXTI1) | Apertura puerta |
 
-Driver minimalista I2C. Pensado para escenario wake-up: el accel duerme
-en low-power, y dispara INT1 cuando detecta movimiento sobre el umbral.
+---
 
-### API en 3 llamadas
+## Uso conjunto — patron ISR + main loop
+
+Ambos drivers siguen el mismo patron:
+1. Una funcion `*_on_interrupt()` se llama desde el callback EXTI (contexto ISR, sin I/O).
+2. Una funcion `*_process_event()` se llama desde el main loop para leer registros / pines y decidir si transmitir.
+
+### 1. Configurar pines en CubeMX (.ioc del proyecto SDK)
+
+| Pin | Modo | Pull | EXTI |
+|---|---|---|---|
+| PA0 | GPIO_EXTI0 | Pull-down | Rising edge |
+| PA1 | GPIO_EXTI1 | Pull-up   | Both edges  |
+| PA9 | I2C1_SCL | None | — |
+| PA10 | I2C1_SDA | None | — |
+
+Habilitar `EXTI Line0 interrupt` y `EXTI Line1 interrupt` en NVIC con prioridad media (ej. 5).
+Habilitar `I2C1` en Fast Mode (400 kHz).
+
+### 2. En `app_sigfox.c` (o `main.c` segun donde manejes la app)
 
 ```c
 #include "lis2dw12.h"
+#include "reed_switch.h"
 
-extern I2C_HandleTypeDef hi2c1;   // generado por CubeMX
+extern I2C_HandleTypeDef hi2c1;
 
-lis2dw12_t accel;
-lis2dw12_init_handle(&accel, &hi2c1);
+static lis2dw12_t   g_accel;
+static reed_switch_t g_reed;
 
-// 1. Verificar comunicacion I2C
-uint8_t id;
-if (lis2dw12_who_am_i(&accel, &id) != LIS2DW12_OK) {
-    // I2C roto o el chip no responde 0x44
-    Error_Handler();
+void app_sensors_init(void)
+{
+    /* Acelerometro */
+    lis2dw12_init_handle(&g_accel, &hi2c1);
+
+    uint8_t id = 0;
+    if (lis2dw12_who_am_i(&g_accel, &id) != LIS2DW12_OK) {
+        /* I2C roto o chip no responde 0x44 */
+        Error_Handler();
+    }
+    lis2dw12_config_wakeup(&g_accel, 200);   /* 200 mg default */
+
+    /* Reed switch */
+    reed_switch_init(&g_reed, GPIOA, GPIO_PIN_1, 50);  /* 50 ms debounce */
 }
 
-// 2. Configurar wake-up con threshold 200 mg
-if (lis2dw12_config_wakeup(&accel, 200) != LIS2DW12_OK) {
-    Error_Handler();
-}
+void app_sensors_poll(void)
+{
+    /* Eventos del acelerometro */
+    if (lis2dw12_has_pending_event(&g_accel)) {
+        lis2dw12_event_t evt;
+        if (lis2dw12_process_event(&g_accel, &evt) == LIS2DW12_OK
+            && evt.detected) {
+            /* TODO: armar payload con bit0 = 1 (accel) y enviar Sigfox */
+        }
+    }
 
-// 3. Despues de la EXTI en PA0, leer la fuente:
-uint8_t src;
-lis2dw12_read_wake_source(&accel, &src);
-if (src & LIS2DW12_WU_SRC_WU_IA) {
-    // hubo evento de wake-up
-    // bits LIS2DW12_WU_SRC_X / _Y / _Z indican el eje dominante
+    /* Eventos del reed switch */
+    if (reed_switch_has_pending_event(&g_reed)) {
+        reed_state_t st;
+        reed_switch_process_event(&g_reed, &st);
+        /* TODO: armar payload con bit1 = 1 (magnetico) y estado st */
+    }
 }
 ```
 
-### Como integrarlo al proyecto CubeIDE del SDK
+### 3. En `stm32wlxx_it.c` o donde tengas el callback EXTI
 
-El SDK SJI vive en `~/GitHub/LSM110A`. El proyecto Eclipse esta en
-`Projects/NUCLEO-WL55JC/Applications/LoRaWAN_SigFox/LSM1x0A/STM32CubeIDE/`.
+El HAL provee un weak `HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)`. Override en
+**un solo lugar** del proyecto. Sugerido: en `app_sigfox.c` o en un nuevo
+`event_dispatch.c` colgando de `Application/User/`.
 
-Pasos para sumar este driver al proyecto:
+```c
+extern lis2dw12_t   g_accel;
+extern reed_switch_t g_reed;
+
+void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
+{
+    if (GPIO_Pin == GPIO_PIN_0) {
+        lis2dw12_on_interrupt(&g_accel);
+    }
+    else if (GPIO_Pin == GPIO_PIN_1) {
+        reed_switch_on_interrupt(&g_reed);
+    }
+}
+```
+
+### 4. En el main loop (o stm32_seq task)
+
+Llamar `app_sensors_poll()` periodicamente, o despues de salir de Stop2 por
+EXTI. Si usas el scheduler del SDK (`stm32_seq.h`), registra `app_sensors_poll`
+como una tarea y dispara `UTIL_SEQ_SetTask` desde el callback EXTI.
+
+---
+
+## Integracion al proyecto CubeIDE del SDK
+
+El SDK SJI vive en `~/GitHub/LSM110A`. El proyecto Eclipse esta en:
+
+```
+Projects/NUCLEO-WL55JC/Applications/LoRaWAN_SigFox/LSM1x0A/STM32CubeIDE/
+```
+
+Pasos para sumar estos drivers al proyecto:
 
 1. En CubeIDE, click derecho sobre el proyecto -> `New` -> `Folder`.
    Nombrelo `drivers` colgando de `Application/User/`.
 2. Click derecho sobre la carpeta -> `Import` -> `General` ->
    `File System` -> seleccionar `Firmware/drivers/` del repo principal.
-   Marcar `lis2dw12.c` y `lis2dw12.h`. Importante: en `Advanced`,
-   marcar **"Create links in workspace"** para que no se copie,
-   sino que apunte al archivo del repo principal (asi el SDK queda
-   limpio y este driver vive bajo control de version en
-   `0G-LockControl-LSM110A`).
-3. En `Project -> Properties -> C/C++ General -> Paths and Symbols`,
-   agregar la ruta del header a los include paths.
-4. En CubeMX (.ioc del proyecto, si esta) habilitar I2C1 con
-   PA9=SCL, PA10=SDA, fast mode 400 kHz. Habilitar EXTI0 para PA0
-   con trigger rising edge.
-5. Build. Si compila, agregar las 3 llamadas a `app_sigfox.c`.
+   Marcar los 4 archivos `.c/.h`. En `Advanced`, marcar **"Create links
+   in workspace"** para que no se copien — asi quedan versionados
+   en `0G-LockControl-LSM110A`.
+3. `Project -> Properties -> C/C++ General -> Paths and Symbols -> Includes`:
+   agregar la ruta de los headers.
+4. Habilitar I2C1 + EXTI0/1 en el `.ioc` (ver tabla arriba) y
+   regenerar el codigo.
+5. Build. Debe quedar 0 errores.
 
-### Notas de diseño
+---
 
-- **Umbral**: configurable en runtime. Spec dice 200 mg default. La
-  resolucion en FS=2g es ~31 mg/LSB (6 bits).
-- **Consumo**: en low-power mode 1 a 12.5 Hz, el LIS2DW12 consume
-  ~1 uA. El MCU queda en Stop2.
-- **Anti-rebote**: `WAKE_UP_DUR` esta en 0 (pulso instantaneo). Si en
-  campo se ven falsos positivos, subir a 1-2 (cuenta ODR cycles).
+## Notas de diseño
+
+### LIS2DW12
+- Umbral configurable en runtime (default 200 mg, spec sec 4.4).
+- En FS=2g, 1 LSB ≈ 31 mg (6 bits).
+- En low-power mode 1 a 12.5 Hz consume ~1 uA.
+- Anti-rebote: `WAKE_UP_DUR=0` (instantaneo). Subir a 1-2 si hay falsos.
+
+### Reed switch / DRV5032
+- Debounce por software con `HAL_GetTick()`. Default 50 ms.
+- Misma logica para reed y DRV5032 (ambos open-drain con pull-up).
+- Convencion: LOW = iman presente = CLOSED. HIGH = sin iman = OPEN = alarma.
