@@ -16,6 +16,11 @@ Lista de materiales con referencias de proveedores (Mouser, DigiKey, LCSC), cant
 ### Datasheets/
 Hojas de datos de los componentes principales: LSM110A, reed switch, regulador LDO, antena, conectores.
 
+### validation/
+Evidencia de los gates de validación de hardware. `gate2-tx-pulse/` contiene la
+[guía de fuente variable y emulación de CR2450](validation/gate2-tx-pulse/setup-fuente-variable.md)
+para medir el pulso TX (issue #6); el reporte GO/NO-GO va en `REPORT.md`.
+
 ## Consideraciones de Diseño
 
 - El LSM110A integra el STM32WL (Cortex-M4 + radio Sub-GHz), eliminando la necesidad de un módulo RF externo
