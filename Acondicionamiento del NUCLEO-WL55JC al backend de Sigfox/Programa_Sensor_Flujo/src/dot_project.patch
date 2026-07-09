@@ -1,0 +1,13 @@
+# Parche: STM32CubeIDE/.project
+# Agregar dentro de <linkedResources>:
+
++  <link><name>Application/User/Sigfox/App/flow_app.c</name><type>1</type>
++    <locationURI>PARENT-1-PROJECT_LOC/Sigfox/App/flow_app.c</locationURI></link>
+
+# app_features.h y flow_app.h son cabeceras (no se enlazan; ya estan en el include path).
+# Tras editar .project: cerrar y reabrir el proyecto en CubeIDE.
+
+# NOTA IMPORTANTE: flow_app.c define su propio EXTI9_5_IRQHandler y
+# HAL_GPIO_EXTI_Callback (pulsos del sensor en PB8 + boton en PB5). Por eso NO
+# debe estar activa al mismo tiempo que buttons_app (Programa_3_botones), que
+# tambien define esos handlers -> colisionarian. Deja USE_BUTTONS_APP=0.

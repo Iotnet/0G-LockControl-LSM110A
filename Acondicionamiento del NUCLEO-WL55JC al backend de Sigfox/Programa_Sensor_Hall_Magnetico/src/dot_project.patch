@@ -1,0 +1,8 @@
+# Parche: STM32CubeIDE/.project
+# Agregar dentro de <linkedResources>:
+
++  <link><name>Application/User/Sigfox/App/hall_app.c</name><type>1</type>
++    <locationURI>PARENT-1-PROJECT_LOC/Sigfox/App/hall_app.c</locationURI></link>
+
+# app_features.h y hall_app.h son cabeceras (no se enlazan; ya estan en el include path).
+# Tras editar .project: cerrar y reabrir el proyecto en CubeIDE.

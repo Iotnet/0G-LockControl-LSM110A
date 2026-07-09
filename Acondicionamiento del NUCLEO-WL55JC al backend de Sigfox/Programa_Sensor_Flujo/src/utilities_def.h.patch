@@ -1,0 +1,6 @@
+# Parche: Core/Inc/utilities_def.h
+# Agregar el ID de tarea dentro del enum CFG_SEQ_Task_Id_t (bloque USER CODE).
+
+   /* USER CODE BEGIN CFG_SEQ_Task_Id_t */
++  CFG_SEQ_Task_FlowTx,  /* Tarea de medicion de flujo (Hz/L-min) + TX */
+   /* USER CODE END CFG_SEQ_Task_Id_t */

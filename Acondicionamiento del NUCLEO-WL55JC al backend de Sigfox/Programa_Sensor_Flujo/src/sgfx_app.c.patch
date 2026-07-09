@@ -1,0 +1,10 @@
+# Parche: Sigfox/App/sgfx_app.c  (bloques USER CODE)
+
+## /* USER CODE BEGIN Includes */
++#include "app_features.h"
++#include "flow_app.h"
+
+## /* USER CODE BEGIN Sigfox_Init_2 */  (dentro de Sigfox_Init)
++#if USE_FLOW_APP
++  Flow_Init();
++#endif

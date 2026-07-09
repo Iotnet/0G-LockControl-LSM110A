@@ -1,0 +1,7 @@
+# Parche: Core/Inc/stm32wlxx_hal_conf.h
+# Habilitar el modulo HAL de I2C (venia comentado).
+
+-/*#define HAL_I2C_MODULE_ENABLED   */
++#define HAL_I2C_MODULE_ENABLED
+
+# El driver stm32wlxx_hal_i2c.c / _ex.c debe entrar al build (ver dot_project.patch).
