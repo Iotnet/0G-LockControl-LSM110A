@@ -1,0 +1,25 @@
+# Parche: Sigfox/App/sgfx_app.c
+# Registra las apps de usuario dentro de Sigfox_Init(). Todo va en bloques
+# USER CODE (sobrevive a regeneraciones de CubeMX).
+
+## 1) En /* USER CODE BEGIN Includes */ ... /* USER CODE END Includes */
++#include "app_features.h"
++#include "buttons_app.h"
++#include "distance_app.h"
++#include "hall_app.h"
++#include "flow_app.h"
+
+## 2) En /* USER CODE BEGIN Sigfox_Init_2 */ ... /* USER CODE END Sigfox_Init_2 */
+   (dentro de Sigfox_Init(), después de registrar Task_Vcom)
++#if USE_BUTTONS_APP
++  Buttons_Init();
++#endif
++#if USE_DISTANCE_APP
++  Distance_Init();
++#endif
++#if USE_HALL_APP
++  Hall_Init();
++#endif
++#if USE_FLOW_APP
++  Flow_Init();
++#endif

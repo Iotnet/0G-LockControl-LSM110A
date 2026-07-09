@@ -1,0 +1,22 @@
+# Parche: Core/Src/stm32wlxx_it.c
+# Los handlers EXTI de los push-buttons B1/B2/B3 (buttons_app) se envuelven con
+# su feature flag para que no se compilen si la app esta apagada. Las apps
+# hall_app y flow_app definen sus propios handlers EXTI en su .c (no aqui).
+
+## 1) En /* USER CODE BEGIN Includes */
++#include "app_features.h"
+ #include "buttons_app.h"
+
+## 2) En /* USER CODE BEGIN 1 */ ... /* USER CODE END 1 */
+   (envolver EXTI0_IRQHandler, EXTI1_IRQHandler, EXTI9_5_IRQHandler y
+    HAL_GPIO_EXTI_Callback de los botones de la placa)
++#if USE_BUTTONS_APP
+   void EXTI0_IRQHandler(void)       { HAL_GPIO_EXTI_IRQHandler(BUT1_Pin); }
+   void EXTI1_IRQHandler(void)       { HAL_GPIO_EXTI_IRQHandler(BUT2_Pin); }
+   void EXTI9_5_IRQHandler(void)     { HAL_GPIO_EXTI_IRQHandler(BUT3_Pin); }
+   void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) { Buttons_HandleEXTI(GPIO_Pin); }
++#endif /* USE_BUTTONS_APP */
+
+# NOTA: flow_app.c define su propio EXTI9_5_IRQHandler + HAL_GPIO_EXTI_Callback
+# (pulsos del sensor + boton). Por eso buttons_app y flow_app NO deben estar
+# activas al mismo tiempo (colisionarian los handlers).
