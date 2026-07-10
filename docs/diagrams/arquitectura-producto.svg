@@ -1,0 +1,207 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 920 1120" font-family="Segoe UI, -apple-system, Arial, sans-serif">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#14181f"/>
+      <stop offset="1" stop-color="#0a0d12"/>
+    </linearGradient>
+    <linearGradient id="card" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#1c232d"/>
+      <stop offset="1" stop-color="#141a22"/>
+    </linearGradient>
+    <linearGradient id="chip" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#232c38"/>
+      <stop offset="1" stop-color="#1a212b"/>
+    </linearGradient>
+    <filter id="ds" x="-20%" y="-20%" width="140%" height="140%">
+      <feDropShadow dx="0" dy="4" stdDeviation="8" flood-color="#000000" flood-opacity="0.45"/>
+    </filter>
+    <filter id="dsS" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="2" stdDeviation="4" flood-color="#000000" flood-opacity="0.4"/>
+    </filter>
+    <marker id="a" viewBox="0 0 10 10" refX="8.5" refY="5" markerWidth="6.5" markerHeight="6.5" orient="auto-start-reverse">
+      <path d="M 0 1 L 9 5 L 0 9 z" fill="#9aa4b2"/>
+    </marker>
+  </defs>
+
+  <rect width="920" height="1120" rx="18" fill="url(#bg)"/>
+  <rect x="0.5" y="0.5" width="919" height="1119" rx="18" fill="none" stroke="#2a3340"/>
+
+  <!-- ===== Título ===== -->
+  <text x="460" y="52" fill="#eef2f7" font-size="24" font-weight="700" text-anchor="middle">Arquitectura del producto final — 0G LockControl</text>
+  <text x="460" y="78" fill="#8792a2" font-size="13.5" text-anchor="middle">Spec v1.0 · Sigfox RC2 (902–928 MHz México) · firmware API sobre LSM110A · Stop2 ≈ 3 µA</text>
+
+  <!-- ===== Alimentación ===== -->
+  <g filter="url(#ds)">
+    <rect x="44" y="104" width="520" height="118" rx="12" fill="url(#card)" stroke="#8a5a1e"/>
+  </g>
+  <rect x="44" y="104" width="520" height="30" rx="12" fill="#8a5a1e" opacity="0.16"/>
+  <text x="304" y="125" fill="#e8b46a" font-size="14.5" font-weight="700" text-anchor="middle">Alimentación</text>
+
+  <g filter="url(#dsS)"><rect x="62" y="148" width="128" height="56" rx="9" fill="url(#chip)" stroke="#a06a24"/></g>
+  <text x="126" y="171" fill="#eef2f7" font-size="13" font-weight="700" text-anchor="middle">CR2450</text>
+  <text x="126" y="189" fill="#c99a55" font-size="11" text-anchor="middle">3 V · 620 mAh</text>
+
+  <g filter="url(#dsS)"><rect x="216" y="148" width="140" height="56" rx="9" fill="url(#chip)" stroke="#a06a24"/></g>
+  <text x="286" y="168" fill="#eef2f7" font-size="12.5" font-weight="700" text-anchor="middle">Cap 470 µF</text>
+  <text x="286" y="184" fill="#c99a55" font-size="10.5" text-anchor="middle">soporte pulso TX</text>
+  <text x="286" y="198" fill="#8792a2" font-size="9.5" text-anchor="middle">GATE 2: Vmin ≥ 2.5 V</text>
+
+  <g filter="url(#dsS)"><rect x="382" y="148" width="164" height="56" rx="9" fill="url(#chip)" stroke="#a06a24"/></g>
+  <text x="464" y="168" fill="#eef2f7" font-size="12.5" font-weight="700" text-anchor="middle">LDO TPS7A02 + bypass 0 Ω</text>
+  <text x="464" y="184" fill="#c99a55" font-size="10.5" text-anchor="middle">footprint opcional (3.0 V)</text>
+  <text x="464" y="198" fill="#8792a2" font-size="9.5" text-anchor="middle">DT-003 · config dual</text>
+
+  <line x1="190" y1="176" x2="214" y2="176" stroke="#9aa4b2" stroke-width="1.5" marker-end="url(#a)"/>
+  <line x1="356" y1="176" x2="380" y2="176" stroke="#9aa4b2" stroke-width="1.5" marker-end="url(#a)"/>
+
+  <!-- ===== Desacoplo ===== -->
+  <g filter="url(#ds)">
+    <rect x="588" y="104" width="288" height="118" rx="12" fill="url(#card)" stroke="#8a5a1e"/>
+  </g>
+  <rect x="588" y="104" width="288" height="30" rx="12" fill="#8a5a1e" opacity="0.16"/>
+  <text x="732" y="125" fill="#e8b46a" font-size="14.5" font-weight="700" text-anchor="middle">Desacoplo VDD</text>
+  <text x="732" y="165" fill="#dfe5ec" font-size="12.5" text-anchor="middle">100 nF ×4 (cerámico) + 10 µF bulk</text>
+  <text x="732" y="186" fill="#8792a2" font-size="11" text-anchor="middle">a &lt; 2 mm del pin 11</text>
+
+  <!-- Flecha VDD -->
+  <line x1="460" y1="222" x2="460" y2="266" stroke="#9aa4b2" stroke-width="1.8" marker-end="url(#a)"/>
+  <rect x="356" y="230" width="208" height="22" rx="11" fill="#141a22" stroke="#3a4656"/>
+  <text x="460" y="245" fill="#aeb8c6" font-size="11" text-anchor="middle">Pin 11 · VDD 3.0 V directo</text>
+
+  <!-- ===== Bus I2C (izq) ===== -->
+  <g filter="url(#ds)">
+    <rect x="44" y="282" width="238" height="160" rx="12" fill="url(#card)" stroke="#2f6b3a"/>
+  </g>
+  <rect x="44" y="282" width="238" height="30" rx="12" fill="#2f6b3a" opacity="0.18"/>
+  <text x="163" y="303" fill="#7fd68b" font-size="14" font-weight="700" text-anchor="middle">Bus I²C</text>
+  <text x="163" y="332" fill="#dfe5ec" font-size="11.5" text-anchor="middle">PA9 SCL · PA10 SDA</text>
+  <text x="163" y="349" fill="#8792a2" font-size="11" text-anchor="middle">pull-ups 4.7 kΩ</text>
+
+  <g filter="url(#dsS)"><rect x="62" y="364" width="202" height="60" rx="9" fill="url(#chip)" stroke="#3f8a4c"/></g>
+  <text x="163" y="388" fill="#eef2f7" font-size="12.5" font-weight="700" text-anchor="middle">LIS2DW12 (acel)</text>
+  <text x="163" y="406" fill="#7fd68b" font-size="10.5" text-anchor="middle">umbral 200 mg · INT1 → PA0 (EXTI0)</text>
+
+  <!-- ===== Sensor magnético (izq abajo) ===== -->
+  <g filter="url(#ds)">
+    <rect x="44" y="466" width="238" height="176" rx="12" fill="url(#card)" stroke="#2f6b3a"/>
+  </g>
+  <rect x="44" y="466" width="238" height="30" rx="12" fill="#2f6b3a" opacity="0.18"/>
+  <text x="163" y="487" fill="#7fd68b" font-size="14" font-weight="700" text-anchor="middle">Sensor magnético</text>
+  <text x="163" y="514" fill="#8792a2" font-size="11" text-anchor="middle">apertura puerta / ventana · PA1 (EXTI1)</text>
+
+  <g filter="url(#dsS)"><rect x="62" y="528" width="202" height="42" rx="9" fill="url(#chip)" stroke="#3f8a4c"/></g>
+  <text x="163" y="554" fill="#eef2f7" font-size="12" font-weight="700" text-anchor="middle">Reed switch NA</text>
+
+  <g filter="url(#dsS)"><rect x="62" y="580" width="202" height="42" rx="9" fill="url(#chip)" stroke="#3f8a4c"/></g>
+  <text x="163" y="606" fill="#eef2f7" font-size="12" font-weight="700" text-anchor="middle">Hall DRV5032 (SMD)</text>
+
+  <text x="163" y="634" fill="#7fd68b" font-size="10" font-style="italic" text-anchor="middle">ambos footprints en PCB · DT-001</text>
+
+  <!-- ===== LSM110A (centro) ===== -->
+  <g filter="url(#ds)">
+    <rect x="306" y="282" width="342" height="360" rx="14" fill="url(#card)" stroke="#4a63c9" stroke-width="1.4"/>
+  </g>
+  <rect x="306" y="282" width="342" height="34" rx="14" fill="#4a63c9" opacity="0.18"/>
+  <text x="477" y="305" fill="#93a8ff" font-size="15.5" font-weight="800" text-anchor="middle">LSM110A — firmware API</text>
+
+  <text x="477" y="336" fill="#dfe5ec" font-size="12" text-anchor="middle">STM32WLE5 · ARM Cortex-M4 @ 48 MHz</text>
+  <text x="477" y="354" fill="#8792a2" font-size="11" text-anchor="middle">256 KB Flash · 64 KB RAM · radio sub-GHz integrado</text>
+  <text x="477" y="372" fill="#8792a2" font-size="11" text-anchor="middle">TX default +14 dBm · el código C corre dentro del módulo</text>
+
+  <g filter="url(#dsS)"><rect x="326" y="390" width="146" height="42" rx="9" fill="#1a2540" stroke="#5a74d9"/></g>
+  <text x="399" y="416" fill="#a9baff" font-size="11.5" font-weight="700" text-anchor="middle">Sigfox stack (SJI)</text>
+
+  <g filter="url(#dsS)"><rect x="482" y="390" width="146" height="42" rx="9" fill="#14261c" stroke="#3f8a4c"/></g>
+  <text x="555" y="416" fill="#7fd68b" font-size="11.5" font-weight="700" text-anchor="middle">Drivers I²C + EXTI</text>
+
+  <g filter="url(#dsS)"><rect x="326" y="444" width="302" height="42" rx="9" fill="#14261c" stroke="#3f8a4c"/></g>
+  <text x="477" y="470" fill="#7fd68b" font-size="11.5" font-weight="700" text-anchor="middle">Low-power manager · Stop2 ≈ 3 µA · IWDG 4 s</text>
+
+  <g filter="url(#dsS)"><rect x="326" y="498" width="302" height="42" rx="9" fill="#231a40" stroke="#7a5fd0"/></g>
+  <text x="477" y="524" fill="#c3b1ff" font-size="11.5" font-weight="700" text-anchor="middle">Heartbeat 24 h · cooldown 60 s · máx 130 msg/día</text>
+
+  <text x="477" y="566" fill="#5d6b7e" font-size="10.5" text-anchor="middle">stack SJI no se modifica → preserva Sigfox Verified + FCC (DT-004)</text>
+  <text x="477" y="584" fill="#5d6b7e" font-size="10.5" text-anchor="middle">payload 12 bytes congelado v1.0 · codec en repo</text>
+
+  <!-- Flechas sensores → módulo -->
+  <line x1="282" y1="394" x2="304" y2="394" stroke="#7fd68b" stroke-width="1.6" marker-end="url(#a)"/>
+  <line x1="282" y1="552" x2="304" y2="552" stroke="#7fd68b" stroke-width="1.6" marker-end="url(#a)"/>
+
+  <!-- ===== Columna derecha ===== -->
+  <g filter="url(#ds)">
+    <rect x="672" y="282" width="204" height="106" rx="12" fill="url(#card)" stroke="#2d5f9e"/>
+  </g>
+  <rect x="672" y="282" width="204" height="28" rx="12" fill="#2d5f9e" opacity="0.2"/>
+  <text x="774" y="302" fill="#79b3f5" font-size="13.5" font-weight="700" text-anchor="middle">SWD header</text>
+  <text x="774" y="330" fill="#dfe5ec" font-size="11" text-anchor="middle">VDD · SWDIO · SWCLK · GND</text>
+  <text x="774" y="348" fill="#8792a2" font-size="10.5" text-anchor="middle">PA13 / PA14 — pines 7, 8</text>
+  <text x="774" y="366" fill="#8792a2" font-size="10.5" text-anchor="middle">1×4 · 1.27 mm</text>
+
+  <g filter="url(#ds)">
+    <rect x="672" y="404" width="204" height="92" rx="12" fill="url(#card)" stroke="#2d5f9e"/>
+  </g>
+  <rect x="672" y="404" width="204" height="28" rx="12" fill="#2d5f9e" opacity="0.2"/>
+  <text x="774" y="424" fill="#79b3f5" font-size="13.5" font-weight="700" text-anchor="middle">UART debug</text>
+  <text x="774" y="452" fill="#dfe5ec" font-size="11" text-anchor="middle">PB6 TX · PB7 RX</text>
+  <text x="774" y="470" fill="#8792a2" font-size="10.5" font-style="italic" text-anchor="middle">no poblar en producción</text>
+
+  <g filter="url(#ds)">
+    <rect x="672" y="512" width="204" height="106" rx="12" fill="url(#card)" stroke="#2d5f9e"/>
+  </g>
+  <rect x="672" y="512" width="204" height="28" rx="12" fill="#2d5f9e" opacity="0.2"/>
+  <text x="774" y="532" fill="#79b3f5" font-size="13.5" font-weight="700" text-anchor="middle">NRST + BOOT0</text>
+  <text x="774" y="560" fill="#dfe5ec" font-size="11" text-anchor="middle">pin 30 · cap 100 nF</text>
+  <text x="774" y="578" fill="#dfe5ec" font-size="11" text-anchor="middle">pin 31 · BOOT0 flotante</text>
+  <text x="774" y="596" fill="#8792a2" font-size="10.5" text-anchor="middle">pulldown interno</text>
+
+  <line x1="648" y1="337" x2="670" y2="337" stroke="#79b3f5" stroke-width="1.5" marker-end="url(#a)"/>
+  <line x1="648" y1="450" x2="670" y2="450" stroke="#79b3f5" stroke-width="1.5" marker-end="url(#a)"/>
+  <line x1="648" y1="565" x2="670" y2="565" stroke="#79b3f5" stroke-width="1.5" marker-end="url(#a)"/>
+
+  <!-- Flecha RFOUT -->
+  <line x1="477" y1="642" x2="477" y2="690" stroke="#c3b1ff" stroke-width="1.8" marker-end="url(#a)"/>
+  <rect x="392" y="652" width="170" height="22" rx="11" fill="#141a22" stroke="#3a4656"/>
+  <text x="477" y="667" fill="#aeb8c6" font-size="11" text-anchor="middle">Pin 33 · RFOUT 50 Ω</text>
+
+  <!-- ===== Sección RF ===== -->
+  <g filter="url(#ds)">
+    <rect x="120" y="706" width="680" height="176" rx="14" fill="url(#card)" stroke="#7a5fd0" stroke-width="1.4"/>
+  </g>
+  <rect x="120" y="706" width="680" height="34" rx="14" fill="#7a5fd0" opacity="0.18"/>
+  <text x="460" y="729" fill="#c3b1ff" font-size="15" font-weight="800" text-anchor="middle">Sección RF — certificada FCC (datos User Manual 5937666)</text>
+
+  <g filter="url(#dsS)"><rect x="146" y="756" width="188" height="86" rx="10" fill="url(#chip)" stroke="#8b72dd"/></g>
+  <text x="240" y="782" fill="#eef2f7" font-size="12.5" font-weight="700" text-anchor="middle">Matching π</text>
+  <text x="240" y="801" fill="#c3b1ff" font-size="11" text-anchor="middle">0 Ω serie · 2.2 pF shunt</text>
+  <text x="240" y="818" fill="#c3b1ff" font-size="11" text-anchor="middle">+ C102 DNI · 0402</text>
+
+  <g filter="url(#dsS)"><rect x="366" y="756" width="188" height="86" rx="10" fill="url(#chip)" stroke="#8b72dd"/></g>
+  <text x="460" y="782" fill="#eef2f7" font-size="12.5" font-weight="700" text-anchor="middle">Línea CPWG 50 Ω</text>
+  <text x="460" y="801" fill="#c3b1ff" font-size="11" text-anchor="middle">1.0 mm / gap 0.15 mm</text>
+  <text x="460" y="818" fill="#8792a2" font-size="10.5" text-anchor="middle">FR4 1.6 mm · εr 4.3 · no microstrip</text>
+
+  <g filter="url(#dsS)"><rect x="586" y="756" width="188" height="86" rx="10" fill="url(#chip)" stroke="#8b72dd"/></g>
+  <text x="680" y="778" fill="#eef2f7" font-size="12.5" font-weight="700" text-anchor="middle">Antena EVB_LSM ANT</text>
+  <text x="680" y="796" fill="#c3b1ff" font-size="11" text-anchor="middle">serpentín SJI · 1.9 dBi</text>
+  <text x="680" y="812" fill="#8792a2" font-size="10" text-anchor="middle">Gerber confidencial (NDA)</text>
+  <text x="680" y="827" fill="#8792a2" font-size="10" text-anchor="middle">copia exacta → preserva FCC</text>
+
+  <line x1="334" y1="799" x2="364" y2="799" stroke="#c3b1ff" stroke-width="1.6" marker-end="url(#a)"/>
+  <line x1="554" y1="799" x2="584" y2="799" stroke="#c3b1ff" stroke-width="1.6" marker-end="url(#a)"/>
+
+  <text x="460" y="866" fill="#5d6b7e" font-size="10.5" text-anchor="middle">keepout total en antena · GND sólido sin cortes · via stitching · separación ≥ 20 cm a personas (RF exposure)</text>
+
+  <!-- ===== Ciclo ===== -->
+  <g filter="url(#ds)">
+    <rect x="44" y="912" width="832" height="176" rx="14" fill="url(#card)" stroke="#3a4656"/>
+  </g>
+  <rect x="44" y="912" width="832" height="34" rx="14" fill="#3a4656" opacity="0.35"/>
+  <text x="460" y="935" fill="#eef2f7" font-size="15" font-weight="800" text-anchor="middle">Ciclo de operación event-driven</text>
+
+  <text x="460" y="972" fill="#7fd68b" font-size="13" font-weight="700" text-anchor="middle">Sleep ≈ 3 µA → Wake INT (PA0 acel ó PA1 mag) → Lectura sensor</text>
+  <text x="460" y="994" fill="#c3b1ff" font-size="13" font-weight="700" text-anchor="middle">→ TX Sigfox +14 dBm ≈ 50 mA × 2 s → Sleep</text>
+
+  <text x="460" y="1024" fill="#aeb8c6" font-size="11.5" text-anchor="middle">Payload 12 bytes · Heartbeat 24 h · Cooldown 60 s · Máx. 130 msg/día (límite Sigfox 140)</text>
+  <text x="460" y="1044" fill="#aeb8c6" font-size="11.5" text-anchor="middle">CR2450 + cap 470 µF → autonomía de meses a años según frecuencia de eventos</text>
+  <text x="460" y="1068" fill="#5d6b7e" font-size="10.5" font-style="italic" text-anchor="middle">Uso interior (oficina, bodega, cuarto frío) · dimensiones finales sujetas a antena SJI (ref 50×80 mm)</text>
+</svg>

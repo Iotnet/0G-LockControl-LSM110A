@@ -30,9 +30,23 @@ Sleep (3µA)  →  Wake por INT (accel o magnético)  →  Leer sensor
 
 ### Bloques del sistema
 
-![Arquitectura del producto final — 0G LockControl](./docs/Images/arquitectura-producto-v1.png)
+![Arquitectura del producto — 0G LockControl](docs/diagrams/arquitectura-producto.svg)
+
+<details>
+<summary>Ver arquitectura del sistema completo (dispositivo → Sigfox → nube → app)</summary>
+
+![Sistema completo](docs/diagrams/arquitectura-sistema-v2.svg)
+
+</details>
+
+<details>
+<summary>Ver diagrama anterior (v1)</summary>
+
+![Arquitectura del producto final — 0G LockControl (v1)](./docs/Images/arquitectura-producto-v1.png)
 
 > Diagrama disponible también en formato vectorial: [arquitectura-producto-v1.svg](./docs/Images/arquitectura-producto-v1.svg)
+
+</details>
 
 ### Flujo de operación
 
