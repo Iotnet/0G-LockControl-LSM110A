@@ -59,6 +59,7 @@ Registro de decisiones arquitectónicas del proyecto. Cada entrada documenta el 
 - **Decisión:** Copiar exactamente el diseño de antena del EVB de SJI. Agregar conector U.FL como opción de pruebas con jumper 0Ω.
 - **Consecuencia:** El layout de la antena PCB no puede modificarse sin re-certificar. El conector U.FL es solo para pruebas de desarrollo.
 - **Referencia:** FCC ID: 2AS8LLSM110A — fccid.io/2AS8LLSM110A
+- **Actualización (datos FCC verificados, doc 5937666):** La referencia SJI usa CPWG 50Ω (1.0 mm / 0.15 mm), no microstrip. Matching: L101=0Ω, C101=2.2pF, C102=DNI. Placa de referencia 50×80 mm, εr 4.3. Separación RF mínima 20 cm a personas (requisito de certificación). El Gerber de la antena es confidencial — en gestión con GREATECH/SJI bajo NDA.
 
 ## DT-011: Certificaciones — plan de cumplimiento
 - **Fecha:** 2026-05-07

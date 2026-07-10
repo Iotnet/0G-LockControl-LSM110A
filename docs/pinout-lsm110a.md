@@ -15,10 +15,10 @@
 | 16 | PA2 | GPIO | Output push-pull | LED debug |
 | 30 | NRST | Reset | Cap 100nF a GND | Botón reset opcional |
 | 31 | BOOT0 | Boot mode | Flotante (pulldown interno) | No conectar |
-| 33 | RF_OUT | Salida RF 50Ω | Traza microstrip | Antena PCB diseño SJI |
+| 33 | RF_OUT | Salida RF 50Ω | Traza CPWG 50 Ω (1.0 mm / gap 0.15 mm) | Antena PCB diseño SJI |
 
 ## Notas de diseño
 - Todos los pines GND deben conectarse al plano de tierra sólido
 - Capacitores de desacoplo lo más cerca posible de pin VDD
-- Traza RF de 50Ω calculada para FR4 1.6mm 2 capas (~2.8mm ancho)
+- Traza RF: CPWG 50 Ω, 1.0 mm ancho / 0.15 mm gap (FR4 1.6 mm, εr 4.3 — User Manual FCC doc 5937666). Matching: 0 Ω + 2.2 pF + DNI.
 - UART y LED debug: poner footprint pero no poblar en producción
