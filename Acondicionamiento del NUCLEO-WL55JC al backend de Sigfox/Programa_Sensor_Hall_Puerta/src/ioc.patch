@@ -1,0 +1,22 @@
+# Parche: Programa_Sensor_Hall_Puerta.ioc  (vs Sigfox_AT_Slave.ioc V1.5.0)
+# El pin del sensor se declara AQUI y CubeMX genera gpio.c / it.c / NVIC.
+
+## PA1: de boton B2 (falling) a sensor de puerta (ambos flancos)
+-PA1.GPIO_Label=BUT2
+-PA1.GPIO_ModeDefaultEXTI=GPIO_MODE_IT_FALLING
++PA1.GPIO_Label=HALL_DOOR
++PA1.GPIO_ModeDefaultEXTI=GPIO_MODE_IT_RISING_FALLING
+ (PA1.GPIO_PuPd=GPIO_PULLUP se conserva; SH.GPXTI1 se conserva)
+
+## NVIC: habilitar EXTI1 (esto hace que CubeMX genere el handler)
++NVIC.EXTI1_IRQn=true\:0\:0\:false\:false\:true\:true\:true\:true
+
+## Limpieza: pines de programas anteriores eliminados del .ioc
+-PA0.* (BUT1)  -PC6.* (BUT3)  -SH.GPXTI0.*  -SH.GPXTI6.*
+ (renumerar Mcu.PinX y ajustar Mcu.PinsNb: 31 → 29)
+
+## Identidad del proyecto
+-ProjectManager.ProjectName=Sigfox_AT_Slave
++ProjectManager.ProjectName=Programa_Sensor_Hall_Puerta
+ OJO: ProjectManager.Example=Sigfox_AT_Slave SE CONSERVA a proposito
+ (linaje del ejemplo; CubeMX lo necesita para regenerar la app Sigfox).

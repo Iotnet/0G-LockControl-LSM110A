@@ -1,0 +1,15 @@
+# Parche: Sigfox/App/sgfx_app.c  (bloques USER CODE)
+
+## /* USER CODE BEGIN Includes */
++#include "app_features.h"
++#include "hall_door_app.h"
+
+## /* USER CODE BEGIN Sigfox_Init_2 */  (dentro de Sigfox_Init)
++#if USE_DOOR_APP
++  /* Sensor Hall OMNIPOLAR en puerta (PA1/EXTI1, ambos flancos): uplink al
++     ABRIR y al CERRAR, con debounce, ventana minima y tope diario. */
++  DoorHall_Init();
++#endif
+
+# (En el proyecto standalone NO estan los includes/hooks de buttons/distance/
+#  hall/flow de los programas anteriores: cada uno vive en su propio proyecto.)

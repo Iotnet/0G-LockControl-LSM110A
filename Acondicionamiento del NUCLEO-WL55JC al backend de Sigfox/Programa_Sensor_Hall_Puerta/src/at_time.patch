@@ -1,0 +1,64 @@
+# Parche: comando AT$TIME (poner en hora el RTC para el byte de hora del payload)
+# Archivos: Sigfox/App/sgfx_at.h, sgfx_at.c, sgfx_command.c
+# Uso: AT$TIME=HH:MM:SS (set) · AT$TIME? (get)
+# La hora sobrevive resets (backup domain del RTC); tras power-cycle re-ajustar.
+
+## sgfx_at.h — define (junto a AT_ID/AT_PAC)
++#define AT_TIME       "$TIME"
+
+## sgfx_at.h — prototipos
++ATEerror_t AT_time_set(const char *param);   /* AT$TIME=HH:MM:SS */
++ATEerror_t AT_time_get(const char *param);   /* AT$TIME?         */
+
+## sgfx_at.c — include
++#include "stm32_systime.h"
+
+## sgfx_at.c — implementacion (tras AT_DevId_get)
++ATEerror_t AT_time_set(const char *param)
++{
++  uint32_t hh, mm, ss;
++
++  if (tiny_sscanf(param, "%u:%u:%u", &hh, &mm, &ss) != 3)
++  {
++    return AT_PARAM_ERROR;
++  }
++  if ((hh > 23U) || (mm > 59U) || (ss > 59U))
++  {
++    return AT_PARAM_ERROR;
++  }
++
++  SysTime_t newTime;
++  /* DOOR_CLOCK_EPOCH_BASE (hall_door_app.h, multiplo de 86400) marca el reloj
++     como "puesto en hora" => la siembra automatica no lo pisa al resetear. */
++  newTime.Seconds = DOOR_CLOCK_EPOCH_BASE + (uint32_t)(hh * 3600U + mm * 60U + ss);
++  newTime.SubSeconds = 0;
++  SysTimeSet(newTime);
++
++  AT_PRINTF("Reloj en hora: %02u:%02u:%02u\r\n",
++            (unsigned)hh, (unsigned)mm, (unsigned)ss);
++  return AT_OK;
++}
++
++ATEerror_t AT_time_get(const char *param)
++{
++  SysTime_t now = SysTimeGet();
++  uint32_t daySecs = (uint32_t)(now.Seconds % 86400UL);
++
++  AT_PRINTF("%02u:%02u:%02u\r\n",
++            (unsigned)(daySecs / 3600UL),
++            (unsigned)((daySecs % 3600UL) / 60UL),
++            (unsigned)(daySecs % 60UL));
++  return AT_OK;
++}
+
+## sgfx_command.c — entrada en la tabla (tras la de AT_PAC)
++  {
++    .string = AT_TIME,
++    .size_string = sizeof(AT_TIME) - 1,
++#ifndef NO_HELP
++    .help_string = "AT"AT_TIME ": Get/Set hora del reloj (AT$TIME=HH:MM:SS)\r\n",
++#endif /* !NO_HELP */
++    .get = AT_time_get,
++    .set = AT_time_set,
++    .run = AT_time_get,
++  },

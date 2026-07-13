@@ -1,0 +1,17 @@
+# Parche: Core/Src/gpio.c  (MX_GPIO_Init — codigo como CubeMX lo generaria
+# desde el .ioc de este programa)
+
+## Configuracion del pin del sensor (sustituye al bloque BUT1|BUT2 falling)
++  /*Configure GPIO pin : HALL_DOOR_Pin (sensor Hall de puerta, ambos flancos) */
++  GPIO_InitStruct.Pin = HALL_DOOR_Pin;
++  GPIO_InitStruct.Mode = GPIO_MODE_IT_RISING_FALLING;
++  GPIO_InitStruct.Pull = GPIO_PULLUP;
++  HAL_GPIO_Init(HALL_DOOR_GPIO_Port, &GPIO_InitStruct);
+
+## NVIC (al final de MX_GPIO_Init)
++  /* EXTI interrupt init*/
++  HAL_NVIC_SetPriority(EXTI1_IRQn, 0, 0);
++  HAL_NVIC_EnableIRQ(EXTI1_IRQn);
+
+# Se ELIMINARON los bloques de BUT1 (PA0) y BUT3 (PC6). LEDs y probes
+# (PROB1/PROB2) se conservan tal cual (herencia stock del ejemplo).

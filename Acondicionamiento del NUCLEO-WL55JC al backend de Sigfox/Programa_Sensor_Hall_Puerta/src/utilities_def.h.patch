@@ -1,0 +1,7 @@
+# Parche: Core/Inc/utilities_def.h  (bloque USER CODE)
+
+## /* USER CODE BEGIN CFG_SEQ_Task_Id_t */  (enum CFG_SEQ_Task_Id_t)
++  CFG_SEQ_Task_DoorTx,      /* Tarea del sensor Hall de puerta (EXTI) + TX   */
+
+# Unica task de usuario de este programa (las de buttons/distance/hall/flow
+# no existen en el proyecto standalone).

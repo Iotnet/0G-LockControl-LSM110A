@@ -1,0 +1,40 @@
+# Parche: Core/Src/stm32wlxx_it.c + Core/Inc/stm32wlxx_it.h
+# EXTI1 ya NO es hack manual: con NVIC.EXTI1 en el .ioc, CubeMX lo genera.
+# El codigo se dejo EXACTAMENTE como CubeMX lo generaria (regen-safe).
+
+## stm32wlxx_it.h — prototipo (zona generada, junto a los demas handlers)
++void EXTI1_IRQHandler(void);
+
+## stm32wlxx_it.c — includes (USER CODE Includes)
++#include "app_features.h"
++#include "hall_door_app.h"
+
+## stm32wlxx_it.c — handler (zona GENERADA, formato CubeMX, antes de USER CODE 1)
++/**
++  * @brief This function handles EXTI Line 1 Interrupt.
++  */
++void EXTI1_IRQHandler(void)
++{
++  /* USER CODE BEGIN EXTI1_IRQn 0 */
++
++  /* USER CODE END EXTI1_IRQn 0 */
++  HAL_GPIO_EXTI_IRQHandler(HALL_DOOR_Pin);
++  /* USER CODE BEGIN EXTI1_IRQn 1 */
++
++  /* USER CODE END EXTI1_IRQn 1 */
++}
+
+## stm32wlxx_it.c — callback (USER CODE 1)
++#if USE_DOOR_APP
++/**
++  * @brief HAL EXTI callback. Delega al modulo hall_door_app.
++  *        Se ejecuta despues de que HAL limpie el pending bit.
++  */
++void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin)
++{
++  DoorHall_HandleEXTI(GPIO_Pin);
++}
++#endif /* USE_DOOR_APP */
+
+# Se ELIMINARON los ISRs manuales de EXTI0/EXTI1/EXTI9_5 y el callback de
+# buttons_app del proyecto compartido.

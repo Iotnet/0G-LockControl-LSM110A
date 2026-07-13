@@ -1,0 +1,13 @@
+# Parche: STM32CubeIDE/.project
+# Agregar dentro de <linkedResources>:
+
++  <link><name>Application/User/Sigfox/App/hall_door_app.c</name><type>1</type>
++    <locationURI>PARENT-1-PROJECT_LOC/Sigfox/App/hall_door_app.c</locationURI></link>
+
+# app_features.h y hall_door_app.h son cabeceras (no se enlazan; ya estan en el include path).
+# En el proyecto standalone se ELIMINARON los links de: buttons_app.c, distance_app.c,
+# hall_app.c, flow_app.c, vl53l0x.c, vl53l1_platform.c, Core/i2c.c,
+# stm32wlxx_hal_i2c.c y stm32wlxx_hal_i2c_ex.c.
+# Tambien: <name>Sigfox_AT_Slave</name> → <name>Programa_Sensor_Hall_Puerta</name>.
+# Tras editar .project: cerrar y reabrir (re-importar) el proyecto en CubeIDE —
+# OJO: CubeIDE reescribe .project desde su cache si editas con el IDE abierto.

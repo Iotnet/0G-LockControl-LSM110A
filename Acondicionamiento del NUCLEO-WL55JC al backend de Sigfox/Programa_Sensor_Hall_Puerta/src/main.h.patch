@@ -1,0 +1,9 @@
+# Parche: Core/Inc/main.h  (defines generados desde el label del .ioc)
+
+## Sustituye a BUT2_Pin/BUT2_GPIO_Port
++#define HALL_DOOR_Pin GPIO_PIN_1
++#define HALL_DOOR_GPIO_Port GPIOA
++#define HALL_DOOR_EXTI_IRQn EXTI1_IRQn
+
+# Se ELIMINARON BUT1_Pin/BUT1_GPIO_Port y BUT3_Pin/BUT3_GPIO_Port
+# (sus pines ya no estan en el .ioc de este programa).
