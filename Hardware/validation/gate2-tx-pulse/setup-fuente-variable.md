@@ -3,6 +3,10 @@
 > Guía de equipo y setup para medir el pulso TX con soporte del cap de 470 µF.
 > Complementa el checklist del [issue #6](https://github.com/jdiaznxt/0G-LockControl-LSM110A/issues/6).
 > El reporte final GO/NO-GO va en `REPORT.md` en esta misma carpeta.
+>
+> ⚠️ **Si al alimentar sin USB el LED azul parpadea 6 veces y no transmite**, no es
+> la alimentación: es el rate limit del firmware. Causa y desbloqueo en
+> [`TROUBLESHOOTING.md`](TROUBLESHOOTING.md).
 
 ## 1. Por qué no sirve alimentar por USB / puerto serial
 
@@ -100,6 +104,11 @@ la TX se dispara por push-button, así que el USB no hace falta durante la medic
 5. Disparar TX con B1/B2/B3. En RC2 `SIGFOX_API_send_frame` bloquea **7–9 s y
    manda 3 frames** → capturar los 3 dips en una sola ventana (2 s/div) y
    luego hacer zoom al peor. El VDD_min del peor frame es el dato del gate.
+   - **Poner `BTN_TX_REPLICAS` en 3** (el demo viene en 1). Con 1 réplica se ve
+     un solo dip y se **subestima** el peor caso: con 3 frames el cap arranca el
+     3.º ya parcialmente descargado, y ése es el `Vmin` que decide el gate. Las
+     3 réplicas son 1 solo mensaje para el contrato Sigfox — no cuesta tokens
+     extra, sólo energía.
 6. Confirmación de recepción: backend Sigfox (flujo ya validado en issue #2).
 7. Repetir la matriz fresca/50%/EOL de §4 y registrar VDD_min de cada caso.
 

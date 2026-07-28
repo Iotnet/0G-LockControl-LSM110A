@@ -152,11 +152,8 @@ Cuando el usuario presiona físicamente un botón:
    ```c
    void Buttons_HandleEXTI(uint16_t GPIO_Pin)
    {
-     uint32_t now = HAL_GetTick();
-
-     /* --- Debounce software --- */
-     if ((now - lastIsrTick) < BTN_DEBOUNCE_MS) return;
-     lastIsrTick = now;
+     /* --- Debounce software (candado sobre timer RTC) --- */
+     if (debounceLocked != 0U) return;
 
      /* --- Mapea pin a ID --- */
      ButtonId_t btn = BTN_NONE;
@@ -164,6 +161,9 @@ Cuando el usuario presiona físicamente un botón:
      else if (GPIO_Pin == BUT2_Pin) btn = BTN_B2;
      else if (GPIO_Pin == BUT3_Pin) btn = BTN_B3;
      if (btn == BTN_NONE) return;
+
+     debounceLocked = 1U;
+     UTIL_TIMER_Start(&DebounceTimer);
 
      /* --- Set flag + agenda tarea --- */
      if (pendingButton == BTN_NONE) {
@@ -175,7 +175,7 @@ Cuando el usuario presiona físicamente un botón:
 
    Puntos clave:
 
-   - **Debounce por software:** si dos ISR llegan en < 200 ms, se descarta la segunda. Los pulsadores mecánicos rebotan varios milisegundos al cierre — sin debounce, un solo click podría ser leído como 2-3 pulsaciones y disparar múltiples uplinks (**cada uno consume 1 token del contrato Sigfox**).
+   - **Debounce por software:** si dos ISR llegan en < 200 ms, se descarta la segunda. Los pulsadores mecánicos rebotan varios milisegundos al cierre — sin debounce, un solo click podría ser leído como 2-3 pulsaciones y disparar múltiples uplinks (**cada uno consume 1 token del contrato Sigfox**). El candado lo abre un **one-shot de `UTIL_TIMER` (base RTC)**, no `HAL_GetTick()` — ver [Notas de bajo consumo](#notas-de-bajo-consumo).
    - **Descartar dobles:** si `pendingButton` ya tiene un ID, no se sobreescribe. La primera pulsación gana.
    - **No hay `printf` ni operaciones largas** en la ISR — solo comparaciones y una asignación atómica.
 
@@ -192,11 +192,10 @@ static void Buttons_Process(void)
   pendingButton = BTN_NONE;                 /* Listo para el siguiente click */
   if (btn == BTN_NONE) return;
 
-  /* --- Rate limit --- */
-  uint32_t now = HAL_GetTick();
-  if (lastTxTick != 0U && (now - lastTxTick) < BTN_RATE_LIMIT_MS) {
-    APP_PPRINTF("[BTN] Rate limit activo. Faltan %u ms\r\n",
-                (unsigned)(BTN_RATE_LIMIT_MS - (now - lastTxTick)));
+  /* --- Rate limit (candado abierto por GapTimer, base RTC) --- */
+  if (gapLocked != 0U) {
+    APP_PPRINTF("[BTN] Rate limit activo (%u s desde el ultimo TX)\r\n",
+                (unsigned)(BTN_RATE_LIMIT_MS / 1000U));
     Buttons_BlinkBlue(6);                   /* Feedback: 6 parpadeos rapidos */
     return;
   }
@@ -240,7 +239,8 @@ static void Buttons_SendPayload(ButtonId_t button)
 
   if (err == SFX_ERR_NONE) {
     LED_OK_ON();                                     /* LED verde */
-    lastTxTick = HAL_GetTick();                      /* Arranca rate-limit */
+    gapLocked = 1U;                                  /* Arranca rate-limit... */
+    UTIL_TIMER_Start(&GapTimer);                     /* ...sobre el RTC */
     APP_PPRINTF("[BTN] << TX OK\r\n");
     HAL_Delay(BTN_LED_OK_HOLD_MS);
     LED_OK_OFF();
@@ -269,9 +269,11 @@ static const uint8_t PAYLOAD_B3[] = { 0x30, 0x47 };                       /* "0G
 |---|---|---|---|
 | Debounce ISR | 200 ms | `BTN_DEBOUNCE_MS` | Suprime rebotes mecánicos y triple-click accidental. |
 | Rate limit entre TX | 30 s | `BTN_RATE_LIMIT_MS` | Presupuesto de tokens Sigfox (contrato `UnaTag_test` limitado). |
-| Réplicas TX | 1 | `BTN_TX_REPLICAS` | Uplinks de bajo costo. Aumentar a 3 para link más robusto (consume 1 token igual, pero más energía). |
-| LED verde tras TX OK | 3 s | `BTN_LED_OK_HOLD_MS` | Confirmación visual, evita duda del operador. |
-| LED azul tras TX ERR | 3 s | `BTN_LED_ERR_HOLD_MS` | Idem para error. |
+| Réplicas TX | 1 | `BTN_TX_REPLICAS` | Uplinks de bajo costo. Aumentar a 3 para link más robusto (consume 1 token igual, pero más energía). **Para medir el pulso TX usar 3** — es lo que hace el producto. |
+| LED verde tras TX OK | 3 s | `BTN_LED_OK_HOLD_MS` | Confirmación visual, evita duda del operador. `0` = apaga de inmediato. |
+| LED azul tras TX ERR | 3 s | `BTN_LED_ERR_HOLD_MS` | Idem para error. `0` = apaga de inmediato. |
+| LED rojo durante TX | 1 (on) | `BTN_LED_TX_INDICATOR` | `0` para que el dip medido sea del radio solo, sin los ~2-3 mA del LED. |
+| Modo GATE 2 | 0 | `BTN_GATE2_MODE` | `1` = sin rate limit y sin holds de LED, para la medición del pulso TX. Cada pulsación consume un token. |
 
 **Codificación de LEDs:**
 
@@ -371,7 +373,7 @@ BOTONES LISTOS:
   B1 (PA0) --> Hola  (48 6F 6C 61)
   B2 (PA1) --> Mundo (4D 75 6E 64 6F)
   B3 (PC6) --> 0G    (30 47)
-  Debounce: 200 ms  |  Rate limit: 30 s
+  Debounce: 200 ms  |  Rate limit: 30 s  (base RTC)
 ```
 
 Si aparece **`BOTONES LISTOS`**, el módulo se compiló y se ejecutó correctamente.
@@ -396,7 +398,7 @@ Los 3 mensajes juntos forman la frase **"Hola Mundo 0G"** en el backend.
 ### 4. Comportamientos secundarios a probar
 
 - **Doble-click rápido en el mismo botón (< 200 ms):** solo debe llegar 1 mensaje al backend (debounce funcionando).
-- **Segundo click antes de 30 s desde el primero:** LED azul parpadea 6 veces, Serial imprime `[BTN] Rate limit activo. Faltan XXXX ms`, NO se envía.
+- **Segundo click antes de 30 s desde el primero:** LED azul parpadea 6 veces, Serial imprime `[BTN] Rate limit activo (30 s desde el ultimo TX)`, NO se envía. Los 30 s ahora son de **reloj real** (base RTC), se cuenten dormido o despierto.
 - **Comandos AT sin presionar botón:** siguen funcionando en paralelo (`AT`, `AT$ID`, `AT$SF=...`), ver siguiente sección.
 
 ---
@@ -431,6 +433,20 @@ El proyecto original `Sigfox_AT_Slave` usa **stm32_lpm** (Low Power Manager) par
 
 **Consecuencia:** el firmware es apto para operación con batería. En idle, consumo típico STM32WL55JC en STOP2 con RTC = ~2-5 µA (según datasheet). Durante un TX Sigfox: pico de ~90 mA por ~1.5 s totales (3 réplicas de 500 ms cada una), lo cual promedia bien para presiones ocasionales.
 
+### ⚠️ `HAL_GetTick()` no sirve para medir tiempo en este firmware
+
+**SysTick se detiene en Stop2**, así que `HAL_GetTick()` se congela entre eventos: 30 s de reloj de pared pueden ser menos de 1 s de ticks. La **v1.0** usaba `HAL_GetTick()` para el debounce y el rate limit, y eso producía este fallo **sólo al alimentar sin USB** (es decir, justo cuando la placa por fin duerme de verdad):
+
+> el LED azul parpadea 6 veces, no sale uplink, y después el botón queda muerto.
+
+Con USB conectado el bug se esconde: el tráfico del VCP/AT y el debugger mantienen la placa despierta y SysTick corriendo. Es exactamente la condición del GATE 2 (USB desconectado) la que lo destapa.
+
+**v1.1:** debounce y rate limit sobre **`UTIL_TIMER` (base RTC)**, que sí sigue contando en Stop2 — mismo patrón `DebounceTimer`/`GapTimer` que `hall_door_app.c`. `HAL_GetTick()` ya no se usa en el módulo.
+
+Análisis completo, desbloqueo sin reflashear y ajustes al procedimiento de medición: [`Hardware/validation/gate2-tx-pulse/TROUBLESHOOTING.md`](../../Hardware/validation/gate2-tx-pulse/TROUBLESHOOTING.md).
+
+> El mismo patrón sigue presente en la ruta de producto (`app_sensors.c`, cooldown de 60 s; `reed_switch.c`, debounce) — pendiente de M4, ver §7 del troubleshooting.
+
 ---
 
 ## Referencias
@@ -445,4 +461,4 @@ El proyecto original `Sigfox_AT_Slave` usa **stm32_lpm** (Low Power Manager) par
 
 **Autor:** Yahir Flores — `yflores@iotnet.mx`
 **Empresa:** 0G IoT Solutions (previamente WND México) — [0giotsolutions.com](https://0giotsolutions.com/)
-**Versión:** 1.0 · Julio 2026
+**Versión:** 1.1 · Julio 2026 — *debounce y rate limit migrados a `UTIL_TIMER` (base RTC); ver [Notas de bajo consumo](#notas-de-bajo-consumo).*
