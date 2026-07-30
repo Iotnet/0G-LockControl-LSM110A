@@ -11,8 +11,10 @@ y la **extensión propuesta al payload** de 12 bytes.
   [`../PAYLOAD-DEFINICIONES.md`](../PAYLOAD-DEFINICIONES.md).
 
 > Es un documento de **diseño**, no de implementación. Nada de lo que propone
-> está todavía en `payload_codec.{h,c}` ni en `payload_parser.py`. Ver §9 y §10
-> de `PAYLOAD-DEFINICIONES.md` para el estado y los pendientes.
+> está todavía en `payload_codec.{h,c}` ni en `payload_parser.py`.
+> El contrato que sale de aquí es la **v2** y encabeza
+> [`PAYLOAD-DEFINICIONES.md`](../PAYLOAD-DEFINICIONES.md) (§1–§3); lo que el
+> código hace hoy (v1) está en §4, y los pendientes en §8.
 
 ---
 
@@ -152,8 +154,15 @@ registro. Se descarta el timer de propósito general con el MCU despierto.
    y el parser, y recalcular los vectores V1–V3.
 4. Documentar la lógica en el **Notion Hub** del proyecto.
 
-El detalle del punto 3 está en §9 y §10 de
+El detalle del punto 3 está en el **checklist de migración (§8)** de
 [`../PAYLOAD-DEFINICIONES.md`](../PAYLOAD-DEFINICIONES.md).
+
+> Al analizar el layout byte por byte salió un desbalance que conviene resolver
+> **antes** de implementar: `N` se queda con 16 bits para un umbral de decisión de
+> 5, mientras `t_abierto_s` satura en 255 s (4 min 15 s) y no puede reportar
+> "abierta toda la noche" — el caso futuro que este mismo documento propone.
+> Análisis completo y corrección posible en §2.4 de `PAYLOAD-DEFINICIONES.md`.
+> **El layout de §1 no se cambió**: la decisión es tuya / de Franco.
 
 ## Casos futuros contemplados
 
