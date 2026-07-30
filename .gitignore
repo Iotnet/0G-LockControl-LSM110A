@@ -58,5 +58,6 @@ __pycache__/
 *.pdf
 !docs/References/*.pdf
 !docs/Guides/*.pdf
+!docs/diseno-logico/*.pdf
 !Hardware/Datasheets/*.pdf
 !Hardware/certificacion-FCC/*.pdf

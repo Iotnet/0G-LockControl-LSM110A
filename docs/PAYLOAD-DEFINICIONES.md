@@ -12,10 +12,23 @@ y los vectores de prueba validados.
 > - `Tests/payload/test_vectors.md` — 5 vectores con tablas y hex
 > - `Tests/payload/test_payload_host.c` — test host en C
 > - `Firmware/app/payload/VALIDACION.md` — checklist de validación
+> - `docs/diseno-logico/` — **diseño lógico del firmware (FSM + clasificación)**,
+>   que propone extender este contrato → ver [§9](#9-extensión-propuesta-v2--evento-y-tiempo-abierto)
+
+> ### Dos versiones del contrato en este documento
+>
+> | | Estado | Dónde |
+> |---|---|---|
+> | **v1 — vigente** | Implementado y validado 5/5 en código | §1 a §8 |
+> | **v2 — propuesta** | Sólo diseño, **no implementado** | [§9](#9-extensión-propuesta-v2--evento-y-tiempo-abierto) y [§10](#10-pendientes-para-implementar-la-v2) |
+>
+> Lo que hoy corre en `payload_codec.{h,c}` y `payload_parser.py` es la **v1**.
+> La v2 no cambia la longitud (siguen 12 bytes): usa los dos bytes reservados y
+> refina la semántica de dos campos.
 
 ---
 
-## 1. Contrato del payload
+## 1. Contrato del payload (v1 — vigente)
 
 - **Longitud fija:** 12 bytes (`PAYLOAD_LEN = 12`).
 - **Endianness:** los campos `uint16` se serializan en **big-endian** (MSB primero).
@@ -36,6 +49,9 @@ y los vectores de prueba validados.
 **Nota sobre temperatura:** el byte 7 lleva el offset `+40`; la temperatura real
 `temp_c` puede ser negativa. Con `int8_t` y offset 40 el rango representable es
 **−40 .. +87 °C**.
+
+**Bytes 10–11:** hoy reservados a `0x0000`. La v2 los ocupa con `evento` y
+`t_abierto_s` — ver [§9](#9-extensión-propuesta-v2--evento-y-tiempo-abierto).
 
 ---
 
@@ -204,3 +220,166 @@ Decodifica e imprime los mismos 5 vectores.
 - [x] Endianness BE verificado (`magnitud_mg`, `conteo_eventos`).
 - [x] Offset de temperatura correcto (byte 7 = `temp_c + 40`).
 - [x] Compila sin HAL (solo `<stdint.h>`).
+
+---
+
+## 9. Extensión propuesta (v2) — `evento` y tiempo abierto
+
+> **Estado: PROPUESTA, no implementada.** Fuente:
+> [`docs/diseno-logico/`](diseno-logico/) — *Diseño lógico del firmware*, v0.1,
+> José Francisco Díaz, 23-jul-2026. Nada de esta sección está todavía en
+> `payload_codec.{h,c}` ni en `payload_parser.py`.
+
+### 9.1 Por qué
+
+El payload v1 no tiene dónde poner dos cosas que el diseño de la FSM necesita:
+
+1. la **leyenda** de la alarma — `apertura`, `cierre` o `vandalismo`. Hoy el byte 0
+   sólo distingue alarma de heartbeat, no *qué clase* de alarma;
+2. el **tiempo que la puerta estuvo abierta**.
+
+La propuesta **no cambia la longitud**: reutiliza los dos bytes reservados (10–11)
+y refina la semántica de dos campos que ya existen.
+
+### 9.2 Contrato v2
+
+| Byte(s) | Campo | Estado | Definición propuesta |
+|---------|-------|--------|----------------------|
+| **0** | `tipo` | igual | `0x01` alarma / `0x02` heartbeat |
+| **1** | `fuente` | igual | bitfield accel/magnético (qué sensores participaron) |
+| **2–3** | `magnitud_mg` | 🔶 **refinado** | `θ_max`: máxima desviación vs `accel_ref` (mg) |
+| **4** | `eje` | igual | eje dominante del desplazamiento |
+| **5** | `magnetico` | igual | `P`: 0 cerrado / 1 abierto (**estado final** de la ventana) |
+| **6** | `bateria_pct` | igual | batería 0..100 |
+| **7** | `temp` | igual | `temp_c + 40` |
+| **8–9** | `conteo` | 🔶 **redefinido** | `N`: aperturas dentro de la ventana (BE) |
+| **10** | `evento` | 🟢 **NUEVO** | `0x00` ninguno · `0x01` apertura · `0x02` cierre · `0x03` vandalismo |
+| **11** | `t_abierto_s` | 🟢 **NUEVO** | duración abierta en segundos (0–255, **saturado**) |
+
+Los campos "refinados" no cambian de tipo ni de posición — cambia lo que
+*significan*, y eso es justo lo que hay que dejar por escrito para que el backend
+no los interprete mal:
+
+- **`magnitud_mg` → `θ_max`.** Antes era "magnitud de aceleración"; ahora es
+  específicamente la desviación máxima respecto a `accel_ref`, el vector de
+  gravedad capturado **al armar** con la puerta cerrada. Es la variable que
+  discrimina apertura real de forcejeo.
+- **`conteo` → `N`.** Antes era un contador monotónico de eventos del dispositivo.
+  Se libera porque **Sigfox ya entrega un número de secuencia a nivel de red**
+  que el backend ve, así que el contador de la app era redundante. Ese byte rinde
+  más llevando el conteo de aperturas de la ventana.
+- **`magnetico` → `P`.** Mismo campo, pero es el estado **al cierre de la ventana
+  de observación**, no el instantáneo del flanco que despertó al MCU.
+
+### 9.3 Constantes nuevas
+
+```c
+/* Byte 10: evento / leyenda de la alarma */
+typedef enum {
+    EV_NINGUNO    = 0x00,
+    EV_APERTURA   = 0x01,
+    EV_CIERRE     = 0x02,
+    EV_VANDALISMO = 0x03
+} evento_t;
+```
+
+### 9.4 De dónde sale `evento`: la clasificación
+
+Tres booleanas derivadas de las variables de la ventana de observación:
+
+```
+C = (N > n_umbral),  n_umbral = 5           "muchos ciclos"
+M = (θ_max ≥ θ_umbral)                      "movimiento real"
+P = puerta abierta al cierre de la ventana  "estado final"
+```
+
+Minimizadas con Karnaugh (los 8 casos cubiertos, mutuamente excluyentes):
+
+```
+VANDALISMO: V = C · !M
+APERTURA:   A = P · (!C + M)
+CIERRE:     Z = !P · (!C + M)
+```
+
+```c
+evento_t clasificar(uint16_t N, uint16_t th_max, bool puerta_abierta) {
+    bool C = (N > N_UMBRAL);            /* muchos ciclos    */
+    bool M = (th_max >= THETA_UMBRAL);  /* movimiento real  */
+    bool P = puerta_abierta;            /* estado final     */
+
+    if (C && !M)  return EV_VANDALISMO; /* V = C . !M        */
+    if (P)        return EV_APERTURA;   /* A = P . (!C + M)  */
+    else          return EV_CIERRE;     /* Z = !P . (!C + M) */
+}
+```
+
+Tabla de verdad completa, mapas de Karnaugh y la FSM: ver el PDF en
+[`docs/diseno-logico/`](diseno-logico/).
+
+### 9.5 `t_abierto_s` — se mide con RTC, no con timer
+
+`t0 = RTC` en el flanco de apertura → el MCU **vuelve a Stop2** → al flanco de
+cierre, `t_ab = RTC - t0`. Medir cuesta dos lecturas de registro (~3 µA todo el
+intervalo). El enfoque con timer de propósito general y el MCU despierto se
+**descarta**: son mA en vez de µA, ~670× más consumo.
+
+El byte satura en 255 s (4 min 15 s). En RAM la variable es `uint16_t`; la
+saturación ocurre sólo al serializar.
+
+### 9.6 Compatibilidad con los vectores actuales
+
+| Vectores | Efecto de la v2 |
+|---|---|
+| **V4, V5** (heartbeat) | ✅ **Siguen válidos.** En heartbeat los bytes 10–11 quedan en `0x00`, igual que hoy. |
+| **V1, V2, V3** (alarma) | ⚠️ **Hay que recalcularlos** para incluir `evento` (y `t_abierto_s` cuando aplique). |
+
+Un decodificador v1 leyendo un mensaje v2 no truena — ignora los bytes 10–11 —
+pero **pierde la leyenda**, que es justo el dato nuevo. Por eso codec, parser y
+backend tienen que migrar juntos.
+
+### 9.7 Config asociada (`device_config_t`)
+
+La v2 necesita tres parámetros nuevos en la config de flash:
+
+```c
+typedef struct {
+    /* --- ya existentes --- */
+    uint16_t accel_threshold_mg;  /* 200   -> tambien sirve como THETA_UMBRAL */
+    uint16_t cooldown_seconds;    /* 60    -> anti-flood entre TX             */
+    int8_t   tx_power_dbm;        /* 14                                       */
+    uint8_t  heartbeat_hours;     /* 24                                       */
+    uint8_t  daily_msg_limit;     /* 130                                      */
+    /* --- NUEVOS para esta logica --- */
+    uint16_t t_obs_ms;            /* 10000 -> ventana de observacion          */
+    uint8_t  n_umbral;            /* 5     -> umbral de ciclos (vandalismo)   */
+    uint8_t  debounce_ms;         /* 30-50 -> antirrebote del Hall/reed       */
+} device_config_t;
+```
+
+---
+
+## 10. Pendientes para implementar la v2
+
+Checklist para cerrar la migración. **Los cuatro primeros van juntos**: si se
+mueve uno sin los otros, C y Python dejan de coincidir y la validación 5/5 se cae.
+
+- [ ] `Firmware/app/payload/payload_codec.h` — agregar `evento_t`, los campos
+      `evento` y `t_abierto_s` a `payload_t`, y las constantes `EV_*`.
+- [ ] `Firmware/app/payload/payload_codec.c` — escribir bytes 10–11 en
+      `payload_encode` (hoy los fuerza a `0x00`) y leerlos en `payload_decode`
+      (hoy los ignora); saturar `t_abierto_s` a 255.
+- [ ] `App/Backend/payload_parser.py` — espejo: `evento`/`evento_str` y
+      `t_abierto_s` en el dict; quitar `reservado` o dejarlo como alias.
+- [ ] `Tests/payload/test_vectors.md` + `test_payload_host.c` — **recalcular
+      V1–V3**; V4/V5 no cambian. Volver a correr y confirmar 5/5.
+- [ ] `Firmware/app/payload/VALIDACION.md` — agregar los checks de los campos nuevos.
+- [ ] `docs/spec-producto.md` §4.4 — alinear la tabla del payload con la v2.
+- [ ] Backend / callback Sigfox (`docs/sigfox-callback-config.md`) — mapear
+      `evento` a la leyenda que ve el usuario final.
+- [ ] Calibrar `θ_umbral` y `debounce_ms` con la puerta real antes de congelar
+      los defaults.
+- [ ] Asignar el **GPIO del botón de armado** (EXTI libre) — sin él la guarda de
+      armado no existe y la FSM no arranca.
+
+> Mientras la v2 no esté implementada, **§1–§8 siguen siendo el contrato real**.
+> Esta sección es el destino, no el estado.

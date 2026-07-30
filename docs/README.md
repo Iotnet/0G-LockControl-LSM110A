@@ -4,6 +4,13 @@ Documentación técnica, de arquitectura y guías del proyecto 0G LockControl.
 
 ## Subcarpetas
 
+### diseno-logico/
+**Diseño lógico del firmware** — entradas, variables de estado, eventos, máquina
+de estados (FSM), clasificación de eventos con tabla de verdad + Karnaugh, y la
+extensión propuesta al payload. Incluye fuente LaTeX, PDF compilado, el script
+que genera las figuras y las 5 figuras en `figs/`.
+Ver [`diseno-logico/README.md`](diseno-logico/README.md).
+
 ### Architecture/
 Documentos de arquitectura del sistema, decisiones de diseño (ADR), y diagramas de bloques.
 
