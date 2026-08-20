@@ -303,7 +303,8 @@ y las tareas asignadas están en docs/Guides/HANDOFF-FW-M2.md del repo principal
 Léelo COMPLETO antes de responder cualquier cosa.
 
 Hardware:
-- MCU: STM32WL55JC (dev en Nucleo-WL55JC, luego LSM110A en PCB custom).
+- MCU: STM32WL55JC en el Nucleo-WL55JC (dev); STM32WLE5CC en el LSM110A de la PCB
+  custom. Ojo: el WL55JC es dual-core (M4+M0+) y el WLE5CC es single-core (solo M4).
 - Toolchain: STM32CubeIDE 1.18+, GCC arm-none-eabi.
 - SYSCLK: 16 MHz HSI. PCLK1: 16 MHz.
 - I2C1 PA9/PA10 a 100 kHz (Timing 0x10707DBC).

@@ -12,7 +12,7 @@ Footprint custom del modulo **LSM110A** (SJI / Seongji), exportado desde EasyEDA
 | Distribucion de pads | 12 (izq) + 10 (abajo) + 12 (der) + 0 (arriba) |
 | Tamano de pad | 1.20 x 0.60 mm |
 | Pitch | 1.00 mm |
-| Pad central (GND) | Si (exposed pad) |
+| Pad central | No — el modulo no tiene exposed pad |
 | Origen | Centro del componente |
 
 ## Archivos
@@ -27,7 +27,13 @@ Footprint custom del modulo **LSM110A** (SJI / Seongji), exportado desde EasyEDA
 ## Notas
 
 - Verificado contra el datasheet del LSM110A y el diseno de referencia de SJI.
-- El pad central (exposed pad) es GND y debe conectarse al plano de tierra con vias termicas.
+- **No hay pad central.** El footprint tiene exactamente 34 pads, todos perimetrales
+  (12 izq + 10 abajo + 12 der). Verificado por conteo directo sobre
+  `PCB_PCB_LSM_Module_2026-06-04.json`: 34 entradas `PAD`, numeradas 1..34, sin
+  ninguna en el centro del cuerpo.
+- **No meter cobre bajo el modulo.** El DS 5.4 pide PSR coating en esa zona, asi que
+  un plano de tierra con vias termicas bajo el cuerpo es justo lo contrario de lo
+  que pide el fabricante. (Hallazgo N-01, fase F1.)
 - Usar este footprint como base para el layout del PCB del proyecto 0G LockControl.
 
 ## Fuente

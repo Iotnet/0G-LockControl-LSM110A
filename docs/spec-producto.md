@@ -41,7 +41,7 @@ Sleep (3µA) → Wake por INT → Leer sensor → Armar payload → TX Sigfox (~
 
 | Bloque | Componente | Conexión | Función |
 |--------|-----------|----------|---------|
-| Procesador + Radio | LSM110A (STM32WL55) | Integrado | MCU Cortex-M4 + radio sub-GHz |
+| Procesador + Radio | LSM110A (STM32WLE5CC) | Integrado | MCU Cortex-M4 single-core + radio sub-GHz |
 | Acelerómetro | LIS2DW12 | I2C: PA9/PA10 | Detección movimiento |
 | Wake-up accel | LIS2DW12 INT1 | PA0 (EXTI0) | Interrupción hardware |
 | Sensor magnético A | Reed switch NA | PA1 (EXTI1) | Opción A: apertura puerta |

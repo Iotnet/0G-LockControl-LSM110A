@@ -32,8 +32,10 @@
 /* Cooldown minimo entre transmisiones Sigfox (F3: 60 s) */
 #define APP_SENSORS_TX_COOLDOWN_MS        60000U
 
-/* Repeticiones adicionales del frame Sigfox (2 -> 3 frames total, estandar) */
-#define APP_SENSORS_TX_REPEATS            2U
+/* Flag tx_repeat de SIGFOX_API_send_frame: {0,1}, NO es un contador.
+ * 1 = repeticiones estandar Sigfox (3 frames). 0 = frame unico.
+ * Pasar 2 estaba fuera de rango. (Hallazgo H-04, fase F1.) */
+#define APP_SENSORS_TX_REPEATS            1U
 
 /**
  * @brief Ultimo evento de sensor procesado (para F3/F4).

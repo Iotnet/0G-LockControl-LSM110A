@@ -85,7 +85,7 @@ Ver documento completo: [docs/arquitectura-justificacion.md](docs/arquitectura-j
 
 | Componente | Parte | Función |
 |---|---|---|
-| SoC + radio | **LSM110A** (STM32WL55) | MCU Cortex-M4 + radio Sigfox integrado |
+| SoC + radio | **LSM110A** (STM32WLE5CC) | MCU Cortex-M4 single-core + radio Sigfox integrado |
 | Acelerómetro | **LIS2DW12** (I²C) | Detección de movimiento, INT1 → PA0 |
 | Sensor magnético A | **Reed switch NA** | Detección de apertura (opción A) |
 | Sensor magnético B | **DRV5032** (hall) | Detección de apertura (opción B) |
