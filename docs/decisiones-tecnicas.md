@@ -58,7 +58,10 @@ Registro de decisiones arquitectónicas del proyecto. Cada entrada documenta el 
 - **Contexto:** La certificación FCC del LSM110A requiere usar exclusivamente la antena tipo traza PCB diseñada por SJI. Cualquier cambio de antena invalida la FCC.
 - **Decisión:** Copiar exactamente el diseño de antena del EVB de SJI. Agregar conector U.FL como opción de pruebas con jumper 0Ω.
 - **Consecuencia:** El layout de la antena PCB no puede modificarse sin re-certificar. El conector U.FL es solo para pruebas de desarrollo.
-- **Referencia:** FCC ID: 2AS8LLSM110A — fccid.io/2AS8LLSM110A
+- **Referencia:** FCC ID: 2AS8LLSM110A — fccid.io/2AS8LLSM110A. Grant verificado del
+  **2022-06-14**, titular **SJI CO. LTD**, y es para el LSM110A. **Pero el datasheet R08 §7
+  declara otro ID** (`2BEK7LSM110A`, SJIT Co. Ltd) — discrepancia abierta, ver **DT-011b**.
+  No cambiar este ID hasta cerrarla.
 - **Actualización (datos FCC verificados, doc 5937666):** La referencia SJI usa CPWG 50Ω (1.0 mm / 0.15 mm), no microstrip. Matching: L101=0Ω, C101=2.2pF, C102=DNI. Placa de referencia 50×80 mm, εr 4.3. Separación RF mínima 20 cm a personas (requisito de certificación). El Gerber de la antena es confidencial — en gestión con GREATECH/SJI bajo NDA.
 
 ## DT-011: Certificaciones — plan de cumplimiento
@@ -70,4 +73,100 @@ Registro de decisiones arquitectónicas del proyecto. Cada entrada documenta el 
   2. Usar antena PCB del diseño de referencia SJI
   3. No cambiar frecuencia de operación (RC2, 902-928 MHz)
   4. No exceder potencia máxima certificada (+22dBm)
-  5. Etiquetar producto con "Contains FCC ID: 2AS8LLSM110A"
+  5. Etiquetar producto con "Contains FCC ID: <el que confirme el proveedor>" — ver la
+     actualización de abajo; el ID exacto está sin cerrar.
+
+- **Actualización (2026-08-20, hallazgo H-03) — qué FCC ID va en la etiqueta, sin resolver.**
+  Afecta solo a la serigrafía/etiqueta final (F6). Hay **dos FCC ID** en circulación para el
+  LSM110A, y son dos *grantee codes* distintos, no un typo:
+
+  | Código | Titular | Estado verificado |
+  |---|---|---|
+  | `2AS8LLSM110A` | **SJI CO. LTD** | Grant **verificado**, del **2022-06-14**, y **es para el LSM110A** |
+  | `2BEK7LSM110A` | **SJIT Co. Ltd** | El grantee code `2BEK7` tiene grants reales, pero **ninguno del LSM110A localizable** |
+
+- **Lo que dice cada fuente:** el `DS_LSM110A_R08` §7 (pág. 20) declara
+  `2BEK7LSM110A` + IC `32019-LSM110A` + ANATEL `05243-24-12325`. Este repo usa
+  `2AS8LLSM110A`, que es el único de los dos con grant localizable para este módulo.
+- **Por tanto:** la hipótesis de un cambio de titular SJI → SJIT es **plausible pero no
+  confirmada**. Que el datasheet sea más nuevo no basta: no hay grant de LSM110A bajo
+  `2BEK7` que se pueda abrir.
+- **Decisión provisional:** **no se cambia ningún ID en el repo todavía.** Y en v0 se usa
+  **etiqueta adhesiva, no serigrafía** — si se serigrafía el ID equivocado hay que
+  re-fabricar; una etiqueta se cambia.
+- **Pendientes para cerrarlo:**
+  1. Búsqueda en el EAS de la FCC: <https://apps.fcc.gov/oetcf/eas/reports/GenericSearch.cfm>
+     (buscar por grantee code `2BEK7` y por producto `LSM110A`).
+  2. Preguntar a GREATECH / SJI qué FCC ID e IC ID amparan **el lote comprado**, y pedir
+     el PDF del grant y el marcado del módulo.
+- **Lo que NO bloquea:** la compra de U1 (el part number es `WSLSM110A00` y no tiene
+  variante por grant), el esquemático, la BOM, el layout de cobre ni el firmware.
+
+---
+
+> **DT-012 a DT-016 vienen de la fase F1** de la réplica v0 del diseño SJI, donde se
+> tomaron con las etiquetas `D-04`…`D-08`. Se renumeran aquí a la serie `DT-` porque
+> **este archivo es el registro único de decisiones**. La equivalencia queda en
+> `Hardware/v0-replica-sji/ESTADO.md`. Las `D-01`…`D-03` no se trasladan: son de
+> proceso de trabajo (cómo se hace push, cómo se abren los PR, dónde se clona), no de
+> diseño, y viven solo en `ESTADO.md`.
+
+## DT-012: Pinout — el documento viejo se reemplaza, no se parchea
+- **Fecha:** 2026-08-20 · **Fase:** F1 · *(era `D-04`)*
+- **Contexto:** `docs/pinout-lsm110a.md` tenía 4 pines mal (H-01) y **nunca se derivó de la
+  Tabla 5-1-1** del datasheet. Parchear 4 celdas deja el resto sin procedencia conocida.
+- **Decisión:** la fuente de verdad del pinout es
+  `Hardware/v0-replica-sji/00-fuente-de-verdad/pinout-34-pines.md` §1, derivada de la Tabla
+  5-1-1 del DS R08 (págs. 14–15) y verificada contra 3 fuentes. `docs/pinout-lsm110a.md` se
+  reemplaza entero y pasa a ser un subconjunto derivado que apunta a ella.
+- **Consecuencia:** si los dos documentos discrepan, manda `pinout-34-pines.md`. Los errores
+  eran PA9 26→3, PA10 27→4, PA0 14→16, PA2 16→14; los dos últimos eran un intercambio
+  PA0↔PA2 que ponía el LED de debug sobre `UART2_TX`, el puerto de rescate por IAP.
+
+## DT-013: Presupuestos con valores MAX, no typ
+- **Fecha:** 2026-08-20 · **Fase:** F1 · *(era `D-05`)*
+- **Contexto:** los presupuestos de consumo se habían hecho con valores *typical*. H-12.
+- **Decisión:** donde el datasheet publique `max`, los presupuestos usan `max`. Es política
+  general, no una corrección puntual.
+- **Consecuencia:** el consumo en sleep se presupuesta a **5 µA (max)**, no a 1.8 µA (typ).
+  Afecta a la vida de batería calculada y al criterio de GATE 2 en F2.
+
+## DT-014: El MCU del módulo es STM32WLE5CC
+- **Fecha:** 2026-08-20 · **Fase:** F1 · *(era `D-06`)*
+- **Contexto:** el repo decía `STM32WL55*` en ~20 sitios. Ese es el MCU de la placa
+  **Nucleo-WL55JC** del prototipo previo, y se arrastró al repo del módulo.
+- **Decisión:** el MCU dentro del LSM110A es **`STM32WLE5CC`** (DS R08 §1.1, pág. 4 — única
+  mención de un part number de MCU en los 11 PDF del fabricante).
+- **Consecuencia:** el `WL55JC` es **dual-core** (M4 + M0+) y el `WLE5CC` es **single-core**
+  M4; no son intercambiables al hablar de arquitectura. Flash/RAM también difieren, y los
+  256 kB de la letra `C` son los que cuadran con el mapa de memoria. En bring-up,
+  STM32CubeProgrammer reportará la familia **STM32WLE5**. Las referencias a
+  `NUCLEO-WL55JC` / `STM32WL55JCI` del trabajo previo son correctas y **no** se tocan.
+
+## DT-015: La herramienta de CAD es KiCad, no EasyEDA
+- **Fecha:** 2026-08-20 · **Fase:** F1 · *(era `D-07`)*
+- **Contexto:** la guía de fases está escrita mezclada (§2 y §5 dicen EasyEDA, §4 dice
+  KiCad) y el repo tiene un footprint en JSON de EasyEDA.
+- **Decisión:** **manda KiCad.**
+- **Consecuencias:**
+  - El JSON de `Hardware/EasyEDA/Footprints/` **no sirve** en KiCad. Sustituido por librería
+    nativa en `Hardware/v0-replica-sji/kicad-lib/` (símbolo de 34 pines + footprint LGA-34),
+    generada desde las figuras del DS y cotejada contra el JSON: coinciden los 34 pads salvo
+    el pin 2, donde **la versión KiCad es la correcta** (N-07).
+  - Los entregables de F3/F5/F6 cambian de formato: `.kicad_sch`, `.kicad_mod` con polígonos
+    de cobre para la antena, y reglas de DRC de KiCad.
+  - `kicad-cli` permite correr **ERC y DRC por línea de comandos**, y los archivos son texto
+    revisable. Mejora el bucle de validación de F3 y F6.
+  - **No** cambia: JLCPCB como casa de fabricación, la BOM contra LCSC, el stackup de 1.6 mm
+    ni el recálculo de impedancia pendiente (deuda B-03).
+
+## DT-016: Orden real de ejecución de las fases
+- **Fecha:** 2026-08-20 · **Fase:** F1 · *(era `D-08`)*
+- **Contexto:** la guía recomienda hacer F2 (energía) justo después de F1, por ser la que más
+  riesgo elimina por hora invertida. Pero F2 es **trabajo de banco** y falta hardware: CR2450
+  reales y una pila descargada a ~2.4 V para el caso peor.
+- **Decisión:** el orden es **F3 → F4 → (F2 cuando lleguen las pilas) → F5 → F6 → F7**.
+- **Consecuencia:** F2 no bloquea a nadie, pero hay un acoplamiento: **F2 puede forzar
+  cambios en F3** (valor y tecnología del condensador de soporte, y el posible pivot a
+  CR2477). Por eso F3 debe dejar ese footprint dimensionado con holgura y **no cerrar la BOM
+  de alimentación** hasta tener GATE 2.

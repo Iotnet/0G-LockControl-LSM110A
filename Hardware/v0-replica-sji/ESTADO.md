@@ -32,19 +32,39 @@ Ambos repos se clonan sin problema **desde el sandbox de Cowork** (R4 confirmado
 
 ## Decisiones tomadas
 
+> **Numeración — una sola serie.** El registro único de decisiones de diseño es
+> `docs/decisiones-tecnicas.md`, con la serie `DT-`. Las `D-04`…`D-08` de F1 ya están
+> trasladadas allí; **si hay discrepancia, manda `DT-`**. Aquí se conserva el texto de F1
+> con su etiqueta original solo como historia de la fase.
+>
+> | Aquí (F1) | En `docs/decisiones-tecnicas.md` | Tema |
+> |---|---|---|
+> | `D-04` | **DT-012** | El pinout viejo se reemplaza, no se parchea |
+> | `D-05` | **DT-013** | Presupuestos con valores MAX, no typ |
+> | `D-06` | **DT-014** | El MCU del módulo es STM32WLE5CC |
+> | `D-07` | **DT-015** | La herramienta de CAD es KiCad |
+> | `D-08` | **DT-016** | Orden real de ejecución de las fases |
+>
+> `D-01`…`D-03` **no** se trasladan: son de proceso de trabajo (cómo se hace push, cómo se
+> abren los PR, dónde se clona), no de diseño. Viven solo en este archivo.
+>
+> Dos numeraciones en paralelo afirmando lo mismo con etiquetas distintas es la misma clase
+> de fallo que produjo H-01. Las decisiones nuevas de F3 en adelante se numeran **`DT-` desde
+> el principio**, no `D-`.
+
 - **D-01 (F0):** push **manual**, sin token. Cada fase deja un `COMMIT-Fn.md` con los comandos git exactos, que Franco ejecuta con Claude Code. *(decidido por Franco, 2026-08-20)*
 - **D-02 (F0):** **PR por fase**, de `v0/f1-fuente-de-verdad` hacia `feature/v0-replica-sji`. *(decidido por Franco)*
 - **D-03 (F0):** los repos **no** se clonan en la máquina de Franco. Se clonan en el sandbox en cada sesión (tarda segundos y funciona). La carpeta local `PCB\` es **destino de entregables**, no espejo del repo. Los entregables se escriben en ruta espejo del repo para poder copiarlos y commitear sin renombrar. *(decidido por Franco)*
-- **D-04 (F1):** el pinout de `docs/pinout-lsm110a.md` **se reemplaza**, no se parchea. Nunca se derivó de la Tabla 5-1-1 y tiene 4 errores. Sustituto: `00-fuente-de-verdad/pinout-34-pines.md` §1.
-- **D-05 (F1):** donde el DS publique `max`, los presupuestos usan `max`. Cierra H-12 como política, no como corrección puntual.
-- **D-06 (F1):** el MCU del módulo es **STM32WLE5CC** (DS §1.1, pág. 4). Todas las referencias del repo a `STM32WL55*` se corrigen.
-- **D-07 (F1):** la herramienta de CAD es **KiCad**, no EasyEDA. La guía está escrita mezclada (§2 y §5 dicen EasyEDA, §4 dice KiCad); **manda KiCad**. *(confirmado por Franco, 2026-08-20)*
+- **D-04 (F1)** → canónica como **DT-012**: el pinout de `docs/pinout-lsm110a.md` **se reemplaza**, no se parchea. Nunca se derivó de la Tabla 5-1-1 y tiene 4 errores. Sustituto: `00-fuente-de-verdad/pinout-34-pines.md` §1.
+- **D-05 (F1)** → canónica como **DT-013**: donde el DS publique `max`, los presupuestos usan `max`. Cierra H-12 como política, no como corrección puntual.
+- **D-06 (F1)** → canónica como **DT-014**: el MCU del módulo es **STM32WLE5CC** (DS §1.1, pág. 4). Todas las referencias del repo a `STM32WL55*` se corrigen.
+- **D-07 (F1)** → canónica como **DT-015**: la herramienta de CAD es **KiCad**, no EasyEDA. La guía está escrita mezclada (§2 y §5 dicen EasyEDA, §4 dice KiCad); **manda KiCad**. *(confirmado por Franco, 2026-08-20)*
   Consecuencias, y son buenas:
   - El JSON de `Hardware/EasyEDA/Footprints/` **no sirve** en KiCad. Sustituido por librería nativa en `kicad-lib/` (símbolo de 34 pines + footprint LGA-34), generada desde las figuras del DS y **cotejada** contra el JSON de EasyEDA: coinciden los 34 pads salvo el pin 2, donde la versión KiCad es la correcta.
   - Los entregables de F3/F5/F6 cambian de formato: `.kicad_sch`, `.kicad_mod` con polígonos de cobre para la antena, y reglas de DRC de KiCad. Ya no hace falta «JSON importable a ciegas».
   - `kicad-cli` permite correr **ERC y DRC por línea de comandos**. El bucle de la guía §4 («Franco pega el reporte») se puede sustituir por revisión directa del `.kicad_sch` / `.kicad_pcb`, que es texto. Mejora el bucle de validación de F3 y F6.
   - Lo que **no** cambia: JLCPCB como casa de fabricación, la BOM contra LCSC, el stackup de 1.6 mm y el recálculo de impedancia de B-03.
-- **D-08 (F1):** el orden real de ejecución es **F3 → F4 → (F2 cuando lleguen las pilas) → F5 → F6 → F7**, no el de la guía. Razón: F2 es trabajo de banco y falta hardware; F3 es CAD y está desbloqueada. F2 sigue sin bloquear a nadie, pero F3 debe dejar el condensador de soporte dimensionado con holgura y **no cerrar la BOM de alimentación** hasta tener GATE 2.
+- **D-08 (F1)** → canónica como **DT-016**: el orden real de ejecución es **F3 → F4 → (F2 cuando lleguen las pilas) → F5 → F6 → F7**, no el de la guía. Razón: F2 es trabajo de banco y falta hardware; F3 es CAD y está desbloqueada. F2 sigue sin bloquear a nadie, pero F3 debe dejar el condensador de soporte dimensionado con holgura y **no cerrar la BOM de alimentación** hasta tener GATE 2.
 
 ---
 
@@ -139,9 +159,9 @@ lectura visual y son las candidatas a re-revisar si algo no cuadra más adelante
 | **H-10** footprints de ESD en RF | F3 | 🔄 **LOCALIZADO**. DS §6.1 Fig. 6-1-1: `C3 = 100 pF` en serie + `L1 = 47 nH` en shunt, dentro del recuadro *«Options for ESD»*. Topología completa en `red-rf.md` §2. Refuerzo: el DS §3.1 declara ESD de solo ±2 kV. |
 | **H-08** falta supervisor de reset 1.8 V | F3 | 🔄 **DOCUMENTADO con argumento**. DS §6.1 pide `R1 = 100 k` **y** `U2 = 1.8 V Reset_IC`; el EVB no trae ninguno de los dos. Razón cuantificada en `limites-electricos.md` §5.1. |
 | **H-11** cálculos a 915 en vez de 902.2 | F5, F6 | 🔄 **ACOTADO**. RC2 = 902.2 ±0.096 MHz (DS §3.4.1). Error de diseñar a 915: **+1.42 %**. Irrelevante para la traza (banda ancha), relevante para la antena (resonante). |
-| **H-12** presupuesto con typ | F2 | ✅ **CERRADO como política** (D-05). Sleep: **5 µA max**, no 1.8 typ. |
+| **H-12** presupuesto con typ | F2 | ✅ **CERRADO como política** (D-05 = DT-013). Sleep: **5 µA max**, no 1.8 typ. |
 | **H-02** LED en PA2 = UART2_TX | F3 | ⬜ abierto — F1 confirma que UART2 es el puerto IAP (`mapa-memoria.md` §4) y aporta los 3 pines de LED de la referencia. Decisión en F3. |
-| **H-03** FCC ID de serigrafía | F6 | 🔄 **AVANZADO**. DS §7 (pág. 20) declara **FCC `2BEK7LSM110A`** e **IC `32019-LSM110A`** (+ ANATEL `05243-24-12325`). El repo tiene grants a nombre de `2AS8LLSM110A` (titular anterior, SJI→SJIT). Sigue haciendo falta confirmación de GREATECH/SJI sobre qué ID aplica al lote. **Usar etiqueta, no serigrafía**, hasta tener respuesta. |
+| **H-03** FCC ID de serigrafía | F6 | 🔄 **AVANZADO**. DS §7 (pág. 20) declara **FCC `2BEK7LSM110A`** e **IC `32019-LSM110A`** (+ ANATEL `05243-24-12325`). El repo usa `2AS8LLSM110A`. **Corrección (2026-08-20):** `2AS8L` = **SJI CO. LTD**, con grant verificado del **2022-06-14 y para el LSM110A**; `2BEK7` = **SJIT Co. Ltd**, tiene grants reales pero **ninguno del LSM110A localizable**. La hipótesis «titular anterior, SJI→SJIT» queda **sin confirmar** — el ID con respaldo localizable es el del repo, no el del datasheet. Pendiente: búsqueda en el EAS de la FCC (`apps.fcc.gov/oetcf/eas/reports/GenericSearch.cfm`) + confirmación de GREATECH/SJI sobre el lote. **Usar etiqueta, no serigrafía.** Detalle en `docs/decisiones-tecnicas.md` DT-011. |
 | **H-09** falta PSR coating | F6 | ⬜ abierto — DS §5.4 (pág. 17). F1 añade contexto: el README del footprint empuja al error **opuesto** (pad central con vías térmicas bajo el módulo). Ver `validacion-footprint.md` §4. |
 | **H-06** `HAL_GetTick()` se congela en Stop2 | firmware | ⬜ abierto |
 | **H-07** falta tope diario 130 msg + heartbeat 24 h | firmware | ⬜ abierto |

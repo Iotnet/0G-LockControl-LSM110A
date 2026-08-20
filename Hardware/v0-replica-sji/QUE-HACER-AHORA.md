@@ -50,8 +50,11 @@ Antes de hacer nada:
 2. Clona el del fabricante (SOLO git clone, curl a raw.githubusercontent falla):
    git clone --depth 1 --filter=blob:none --sparse https://github.com/Support-SJI/LSM110A.git
    cd LSM110A && git sparse-checkout set --no-cone '/Document/*' && git checkout HEAD
-3. Lee Hardware/v0-replica-sji/ESTADO.md primero: tiene las decisiones D-01..D-06,
+3. Lee Hardware/v0-replica-sji/ESTADO.md primero: tiene las decisiones D-01..D-08,
    las preguntas abiertas de F3, la deuda declarada y la auditoria de F1.
+   OJO con la numeracion: las decisiones de diseno viven en docs/decisiones-tecnicas.md
+   con la serie DT- (D-04..D-08 = DT-012..DT-016). Esa serie es la que manda, y las
+   decisiones nuevas de F3 se numeran DT- desde el principio, no D-.
 4. Lee los 6 .md de Hardware/v0-replica-sji/00-fuente-de-verdad/. Son la fuente
    de verdad de F1: cada dato con documento y pagina. NO los re-derives.
 5. Dime en que punto estamos, hazme las 6 preguntas obligatorias de F3, y espera mi OK.

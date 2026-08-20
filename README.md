@@ -127,7 +127,14 @@ Ver documento completo: [docs/arquitectura-justificacion.md](docs/arquitectura-j
 │   ├── v0-replica-sji/    # Réplica v0 del diseño de referencia SJI
 │   │   ├── ESTADO.md              # Estado entre fases: decisiones, deuda, hallazgos
 │   │   ├── 00-fuente-de-verdad/   # Datos extraídos del DS/UM, con documento y página
-│   │   └── kicad-lib/             # Símbolo 34 pines + footprint LGA-34 (KiCad)
+│   │   ├── kicad-lib/             # Símbolo 34 pines + footprint LGA-34 (KiCad)
+│   │   ├── 01-energia/            # F2  energía + GATE 2
+│   │   ├── 02-esquematico/        # F3  esquemático (bloques/ + export/)
+│   │   ├── 03-bom/                # F4  BOM
+│   │   ├── 04-antena/             # F5  antena
+│   │   ├── 05-layout/             # F6  layout
+│   │   ├── 06-fabricacion/        # F7  fabricación
+│   │   └── 07-bring-up/           # F7  bring-up (el uplink cierra v0)
 │   ├── kicad/             # Proyecto KiCad (esquemático + PCB)
 │   ├── Datasheets/        # Hojas de datos de componentes clave
 │   ├── Schematic/
