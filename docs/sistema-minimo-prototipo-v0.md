@@ -13,7 +13,12 @@ Tarjeta mínima de ~35×45 mm con: LSM110A + CR2450 + sensor magnético + aceler
 
 ## 2. Esquemático — conexiones (net por net)
 
-Fuente de verdad de pines: `docs/pinout-lsm110a.md` (datasheet R03). Referencias = `Hardware/BOM/bom-mvp-v0.csv`.
+Fuente de verdad de pines: `Hardware/v0-replica-sji/00-fuente-de-verdad/pinout-34-pines.md` §1
+(datasheet **R08**, Tabla 5-1-1). Referencias = `Hardware/BOM/bom-mvp-v0.csv`.
+
+> **Corregido (H-01):** los números de pin de I2C e INT1 de esta sección venían del pinout
+> viejo y estaban mal. Ya están actualizados abajo. **Queda un punto abierto: el LED de
+> debug** — ver la nota en §2.4.
 
 ### 2.1 Alimentación
 
@@ -39,9 +44,9 @@ Ambos son activo-bajo con imán presente → **cero cambio de firmware** (`reed_
 ### 2.3 Acelerómetro
 
 ```
-U2 LIS2DW12: VDD+VDDIO→VDD + C3/C4 100nF · SCL→PA9 (pin 26) · SDA→PA10 (pin 27)
+U2 LIS2DW12: VDD+VDDIO→VDD + C3/C4 100nF · SCL→PA9 (pin 3) · SDA→PA10 (pin 4)
 R2,R3 pull-ups I2C → VDD (ver §3, discrepancia 4.7k vs 10k)
-INT1 → PA0 (pin 14), pull-down interno en firmware
+INT1 → PA0 (pin 16), pull-down interno en firmware
 ```
 
 ### 2.4 Debug / misc
@@ -49,10 +54,19 @@ INT1 → PA0 (pin 14), pull-down interno en firmware
 ```
 J1 SWD 5p: VDD · SWDIO PA13 (pin 7) · SWCLK PA14 (pin 8) · NRST (pin 30) · GND
 J2 UART 3p (footprint, NO poblar en producción): PB6 TX (pin 19) · PB7 RX (pin 18) · GND
-LED1 verde + R8 1k ← PA2 (pin 16)
+LED1 verde + R8 1k ← PENDIENTE, ver nota (NO PA2)
 NRST ── C5 100nF ── GND
 BOOT0 (pin 31): flotante (pull-down interno) + testpoint TP1 (recovery por bootloader)
 ```
+
+> **El LED no puede ir en PA2.** Este documento lo ponía en «PA2 (pin 16)», que estaba mal
+> por las dos puntas: PA2 es el **pin 14**, y su función es `UART2_TX` — el puerto del
+> bootloader IAP, la única vía de rescate si el firmware deja el módulo sin SWD. El pin 16
+> es PA0, que ya lleva INT1 del acelerómetro.
+>
+> Pines libres donde el diseño de referencia de SJI pone sus LEDs: **PA8 (24), PA11 (5),
+> PA15 (9)**. Ninguno choca con UART2. **La elección la cierra F3** (hallazgo H-02), así que
+> aquí queda sin asignar a propósito.
 
 ### 2.5 RF
 

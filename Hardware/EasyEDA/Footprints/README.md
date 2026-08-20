@@ -1,5 +1,14 @@
 # LSM110A — Footprint EasyEDA
 
+> **Superado por la libreria KiCad (decision D-07).** La herramienta de CAD del proyecto es
+> **KiCad**, y este JSON no sirve en KiCad. Usar
+> [`Hardware/v0-replica-sji/kicad-lib/`](../../v0-replica-sji/kicad-lib/): simbolo de 34
+> pines + footprint LGA-34 nativos, generados desde las figuras del DS y cotejados contra
+> este archivo (coinciden los 34 pads salvo el pin 2, donde **la version KiCad es la
+> correcta** — este JSON lo tiene +0.016 mm fuera de reticula, hallazgo N-07).
+>
+> Este archivo se conserva como referencia historica y como contraste de verificacion.
+
 Footprint custom del modulo **LSM110A** (SJI / Seongji), exportado desde EasyEDA el 2026-06-04.
 
 ## Datos del footprint
