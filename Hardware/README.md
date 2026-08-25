@@ -16,6 +16,14 @@ Lista de materiales con referencias de proveedores (Mouser, DigiKey, LCSC), cant
 ### Datasheets/
 Hojas de datos de los componentes principales: LSM110A, reed switch, regulador LDO, antena, conectores.
 
+### KiCad/
+Diseño en KiCad de la [antena IFA ranurada integrada en PCB](KiCad/README.md)
+(`ANT_IFA_915MHz_LSM110A`), reconstruida del plano «1.5 Antenna Dimension»: footprint,
+símbolo, placa de prueba para ajuste con NanoVNA y generadores paramétricos. Todo se
+regenera y verifica con `KiCad/tools/build.sh` (114 comprobaciones, DRC = 0).
+**Ojo:** es un redibujo, no el Gerber oficial de SJI — ver el aviso de certificación del
+README.
+
 ### validation/
 Evidencia de los gates de validación de hardware. `gate2-tx-pulse/` contiene la
 [guía de fuente variable y emulación de CR2450](validation/gate2-tx-pulse/setup-fuente-variable.md)

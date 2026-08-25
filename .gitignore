@@ -48,6 +48,15 @@ __pycache__/
 *.pyc
 .venv/
 
+# KiCad: ajustes locales, respaldos y salidas de fabricacion regenerables
+*.kicad_prl
+*-backups/
+fp-info-cache
+*.kicad_pcb-bak
+*.kicad_sch-bak
+*.kicad_pro-bak
+*.net
+
 # Archives (too large for git)
 *.zip
 *.rar

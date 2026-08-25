@@ -37,6 +37,9 @@ Fuentes: User Manual FCC 5937666 · datasheet LSM110A R03 · decisiones DT-001 a
 ## Checklist pre-gerber
 - [ ] Impedancia CPWG verificada (1.0 / 0.15 / 1.6 mm / εr 4.3 ≈ 50 Ω)
 - [ ] Antena importada del Gerber oficial SJI (NO redibujada a mano)
+      → mientras llega el NDA hay un redibujo parametrico verificado en
+        `Hardware/KiCad/` (`ANT_IFA_915MHz_LSM110A`), util para prototipo y ajuste
+        con NanoVNA. Falta superponerlo con el Gerber oficial antes de fabricar.
 - [ ] GND continuo bajo módulo + stitching RF
 - [ ] GATE 2 cerrado → confirma CR2450 + 470 µF (o pivot CR2477 / 1000 µF)
 - [ ] Revisión cruzada con Yahir (pines vs firmware)

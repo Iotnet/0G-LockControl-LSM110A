@@ -1,0 +1,16 @@
+(version 1)
+
+# Reglas DRC especificas de RF para la antena IFA del LSM110A.
+#
+# El gap coplanar del CPWG es un parametro de impedancia, no una holgura de
+# fabricacion: con 1.00 mm de pista, 0.15 mm de gap, FR4 de 1.6 mm y er = 4.3
+# la linea da ~50 ohm (User Manual FCC 5937666). Si el gap crece, la impedancia
+# sube y aparece desadaptacion.
+
+(rule "CPWG 50R - gap coplanar de la linea RF"
+    (condition "A.NetClass == 'RF' && B.NetClass != 'RF'")
+    (constraint clearance (min 0.15mm)))
+
+(rule "RF - sin costura de vias dentro del area de antena"
+    (condition "A.Type == 'Via' && A.insideArea('ANT_KEEPOUT')")
+    (constraint disallow via))

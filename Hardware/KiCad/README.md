@@ -1,0 +1,158 @@
+# Antena PCB en KiCad — `ANT_IFA_915MHz_LSM110A`
+
+Diseño en KiCad de la antena IFA ranurada del plano **«1.5 Antenna Dimension»**, para el
+0G LockControl (LSM110A, Sigfox RC2/RC4, 902 – 928 MHz).
+
+![vista previa](export/antenna-geometry-preview.svg)
+
+Todo se genera desde un único fichero de geometría paramétrica y se verifica con el motor
+real de KiCad: **114 comprobaciones, 0 fallos, DRC limpio**.
+
+---
+
+## ⚠️ Aviso de certificación — leer antes de usarlo en producción
+
+Este footprint es un **redibujo** del plano que se entregó. La certificación modular FCC
+del LSM110A (FCC ID `2AS8LLSM110A`) cubre **únicamente el patrón «EVB_LSM ANT» de SJI**, y
+su Gerber es confidencial: hay que pedirlo a GREATECH o a SJI bajo NDA
+(ver [`Hardware/certificacion-FCC/README.md`](../certificacion-FCC/README.md)).
+
+`docs/especificaciones-diseno-pcb.md` ya lo pide explícitamente:
+*«Antena importada del Gerber oficial SJI (NO redibujada a mano)»*.
+
+Qué significa en la práctica:
+
+- ✅ **Sirve ya** para prototipar, medir, ajustar con NanoVNA y cerrar la geometría del
+  producto.
+- ❌ **No basta** para apoyarse en la certificación modular. Antes de fabricar la versión
+  final hay que **superponer este cobre con el Gerber oficial** y confirmar que coincide.
+  Si no coincide, o el producto se recertifica, o se sustituye por el patrón oficial.
+- El footprint está parametrizado precisamente para que ese cotejo sea barato: se corrige
+  la cota en `tools/antenna_geometry.py` y se regenera todo.
+
+---
+
+## Contenido
+
+```
+libraries/
+  0G_Antenna.kicad_sym                      símbolo (2 pines: FEED, GND)
+  0G_Antenna.pretty/
+    ANT_IFA_915MHz_LSM110A.kicad_mod        la antena: cobre + keepout + documentación
+    ANT_LSM110A_SlotRow_OPTIONAL.kicad_mod  fila de ranuras mecánicas (OPCIONAL, sin cotar)
+  0G_RF.pretty/
+    C_0402_1005Metric_0G.kicad_mod          land 0402 para C101
+    TP_Coax_50R_NanoVNA.kicad_mod           isla de 3 pads para pigtail coaxial
+
+antenna-test-board/                         placa de prueba y ajuste, 50 × 80 mm, DRC = 0
+  antenna-test-board.kicad_pcb
+  antenna-test-board.kicad_pro              netclases Default (0.15) y RF (1.00 / 0.15)
+  antenna-test-board.kicad_dru              reglas DRC de RF
+  fp-lib-table                              resuelve las bibliotecas al abrir el proyecto
+
+tools/                                      generadores y verificadores (fuente de verdad)
+docs/                                       geometría cotada y método de verificación
+export/                                     renders + informe DRC (artefactos generados)
+```
+
+## Uso
+
+### Añadir las bibliotecas a KiCad
+
+*Preferences → Manage Footprint Libraries* y *Manage Symbol Libraries*, o bien copiar las
+entradas de `antenna-test-board/fp-lib-table`:
+
+| Nickname | Ruta |
+|---|---|
+| `0G_Antenna` | `Hardware/KiCad/libraries/0G_Antenna.pretty` |
+| `0G_RF` | `Hardware/KiCad/libraries/0G_RF.pretty` |
+| `0G_Antenna` (símbolos) | `Hardware/KiCad/libraries/0G_Antenna.kicad_sym` |
+
+### Colocar la antena en una placa
+
+El origen del footprint es la **esquina superior izquierda del cobre**. Para reproducir el
+plano en una placa cuyo borde superior esté en `y_borde`:
+
+```
+x = (ancho_placa − 39.50) / 2      ← antena centrada
+y = y_borde + 4.00
+```
+
+En la placa de prueba (50 mm de ancho, borde superior en y = 0) eso da **(5.25, 4.00)**.
+
+El footprint trae su propio *rule area* y su courtyard, así que el plano de tierra se
+recorta solo y ningún componente puede caer en la zona de la antena. No hay que dibujar
+el hueco a mano.
+
+### En el esquemático
+
+El símbolo tiene **dos pines**, y eso es deliberado:
+
+```
+   RFOUT (pin 33 del LSM110A) ──[ C101 ]── FEED (pin 1)  ANT1
+                                              GND (pin 2) ── GND
+```
+
+Una IFA está unida a masa por su stub de cortocircuito, así que ese camino existe de
+verdad y el esquemático debe reflejarlo. El footprint declara los pads 1 y 2 como
+**net tie** (`net_tie_pad_groups`), de modo que KiCad entiende que el corto es intencional
+y el DRC no lo marca.
+
+### Regenerar y verificar
+
+```bash
+cd Hardware/KiCad/tools
+./build.sh
+```
+
+Requiere KiCad ≥ 7 con los bindings de Python. Devuelve código ≠ 0 si algo falla.
+
+**No editar a mano** los `.kicad_mod`, el `.kicad_sym` ni el `.kicad_pcb`: se generan.
+Para cambiar una cota, se cambia en `tools/antenna_geometry.py` y se regenera.
+
+## Reglas que hay que respetar al integrarla
+
+Si no se cumplen, la antena no resuena donde se midió:
+
+1. Borde superior de la PCB a **4.00 mm** sobre el origen del footprint.
+2. Plano de tierra arrancando **exactamente** en `y = 16.03`, en ambas capas. En una IFA
+   el borde del plano es parte de la antena.
+3. **Cero** cobre, plano, vías o componentes por encima de ese borde, en las dos capas.
+4. Costura de vías justo por debajo del borde del plano.
+5. Línea RF en **CPWG 1.00 / 0.15** desde el pad de feed (User Manual FCC 5937666).
+6. El plano de tierra del producto debe parecerse al de la placa de prueba. Si cambia de
+   tamaño, hay que volver a ajustar.
+7. En el producto final: **20 cm** mínimo antena-personas y etiquetado
+   `Contains FCC ID: 2AS8LLSM110A` / `Contains IC: 25119-LSM110A` (KDB 996369 D03).
+
+## Placa de prueba y ajuste
+
+`antenna-test-board/` es una placa de 2 capas y **50 × 80 mm** — la PCB de referencia de
+SJI que consta en el User Manual del expediente FCC. El tamaño no es arbitrario: en una
+IFA el plano de tierra es el contrapeso, así que medir sobre el mismo plano de la
+referencia es la única forma de que el S11 sea comparable.
+
+Lleva la antena colocada según el plano, plano de tierra en las dos capas, línea CPWG
+50 Ω, C101 en serie y una isla de 3 pads (**J1**) para soldar un pigtail coaxial y medir
+con NanoVNA. El procedimiento de ajuste está en
+[`docs/verificacion.md`](docs/verificacion.md#procedimiento-de-ajuste-con-nanovna).
+
+## Documentación
+
+- [`docs/geometria-antena.md`](docs/geometria-antena.md) — todas las cotas, cómo se
+  derivan del plano, las **tres discrepancias** encontradas y qué se hizo con cada una.
+- [`docs/verificacion.md`](docs/verificacion.md) — qué se comprueba y cómo, los
+  **7 errores** que encontró el proceso, y qué **no** cubre.
+
+## Estado
+
+| | |
+|---|---|
+| Cadena de cotas | ✅ 17/17 |
+| Footprints (cargados con `pcbnew`) | ✅ 63/63 |
+| Placa: DRC + cotas del cobre real | ✅ 34/34 |
+| DRC de la placa de prueba | ✅ 0 violaciones, 0 pads sin conectar, 0 errores de footprint |
+| Cotejo con el Gerber oficial de SJI | ⏳ pendiente de NDA con GREATECH |
+| Medida de S11 | ⏳ pendiente de fabricar la placa de prueba |
+
+Generado y verificado con KiCad 7.0.11. Formato de fichero compatible con KiCad 7/8/9.
