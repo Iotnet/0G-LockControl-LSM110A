@@ -58,6 +58,14 @@ def main() -> None:
     rpt = pcb.parent.parent / "export" / "drc-report.txt"
     rpt.parent.mkdir(parents=True, exist_ok=True)
     pcbnew.WriteDRCReport(board, str(rpt), pcbnew.EDA_UNITS_MILLIMETRES, True)
+
+    # El informe se versiona en git, asi que se le quita la marca de tiempo:
+    # si no, cada ejecucion de build.sh lo deja modificado sin haber cambiado
+    # nada. La fecha real es la del commit.
+    rpt.write_text("\n".join(
+        ln for ln in rpt.read_text().splitlines()
+        if not ln.startswith("** Created on ")
+    ) + "\n", encoding="utf-8")
     text = rpt.read_text()
     n_drc = int(text.split("Found ")[1].split(" DRC")[0])
     n_unc = int(text.split("Found ")[2].split(" unconnected")[0])

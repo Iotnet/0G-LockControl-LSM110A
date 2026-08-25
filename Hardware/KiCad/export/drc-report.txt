@@ -1,5 +1,4 @@
 ** Drc report for /home/user/0G-LockControl-LSM110A/Hardware/KiCad/antenna-test-board/antenna-test-board.kicad_pcb **
-** Created on 2026-08-25 16:03:18 **
 
 ** Found 0 DRC violations **
 

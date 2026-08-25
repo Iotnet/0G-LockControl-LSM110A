@@ -20,6 +20,8 @@ de la referencia es la unica forma de que el S11 sea comparable.
 from __future__ import annotations
 
 import json
+import re
+import uuid
 import sys
 from pathlib import Path
 
@@ -341,12 +343,47 @@ def build(outdir: Path) -> None:
     if len(on_disk["netclass_patterns"]) != 2:
         raise RuntimeError("faltan los patrones de netclase RF")
 
-    print(f"escrito: {pcb}")
+    n_uuid = normalize_uuids(pcb)
+
+    print(f"escrito: {pcb}  ({n_uuid} tstamp normalizados)")
     print(f"escrito: {pro}  (netclases: {', '.join(names)})")
     print(f"  zonas rellenadas : {len(list(board2.Zones()))}")
     print(f"  pads/vias/pistas : {len(list(board2.GetPads()))} / "
           f"{len([t for t in board2.GetTracks() if t.Type() == pcbnew.PCB_VIA_T])} / "
           f"{len([t for t in board2.GetTracks() if t.Type() == pcbnew.PCB_TRACE_T])}")
+
+
+UUID_NS = uuid.UUID("6f0a1c2e-9b3d-4f5a-8c7b-0d1e2f3a4b5c")  # el mismo de gen_footprints
+UUID_RE = re.compile(
+    r"\b[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}\b"
+)
+
+
+def normalize_uuids(pcb: Path) -> int:
+    """
+    Sustituye los UUID aleatorios del .kicad_pcb por otros deterministas.
+
+    pcbnew asigna un KIID aleatorio a cada item de placa y `m_Uuid` es de solo
+    lectura desde Python, asi que no se pueden fijar al construir. Sin esto,
+    cada ejecucion de build.sh cambiaria los 131 tstamp del archivo y el diff
+    de git seria inservible para revisar un cambio de geometria.
+
+    La sustitucion va por ORDEN DE PRIMERA APARICION, que es estable porque el
+    generador crea los items siempre en el mismo orden. Todas las apariciones
+    de un mismo UUID se sustituyen por el mismo valor, asi que las referencias
+    cruzadas dentro del archivo siguen siendo validas.
+    """
+    text = pcb.read_text(encoding="utf-8")
+    mapping: dict[str, str] = {}
+    for found in UUID_RE.findall(text):
+        if found not in mapping:
+            mapping[found] = str(uuid.uuid5(UUID_NS, f"test-board:{len(mapping)}"))
+
+    def sub(m):
+        return mapping[m.group(0)]
+
+    pcb.write_text(UUID_RE.sub(sub, text), encoding="utf-8")
+    return len(mapping)
 
 
 FP_LIB_TABLE = """(fp_lib_table

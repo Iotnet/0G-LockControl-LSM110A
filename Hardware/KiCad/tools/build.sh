@@ -62,5 +62,14 @@ kicad-cli sym export svg --output "$EXPORT/symbol" \
     "$LIB/0G_Antenna.kicad_sym" >/dev/null
 echo "escrito: $EXPORT/symbol/"
 
+# Los SVG exportados llevan la fecha de generacion en su <title>. Se versionan
+# en git, asi que se normaliza: si no, cada build los deja modificados sin que
+# haya cambiado la geometria.
+for f in "$EXPORT"/*.svg "$EXPORT"/symbol/*.svg; do
+    [ -f "$f" ] || continue
+    sed -i -E 's#(<title>SVG Image created as [^ ]+) date [0-9/: ]*#\1#' "$f"
+done
+echo "normalizadas las marcas de tiempo de los SVG"
+
 echo
 echo "TODO OK - antena regenerada y verificada"
