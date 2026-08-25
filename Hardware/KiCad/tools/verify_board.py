@@ -21,6 +21,7 @@ import antenna_geometry as G
 
 MM = 1_000_000.0
 TOL = 0.002
+VIA_R = 0.30  # radio del pad de via
 
 results: list[tuple[bool, str]] = []
 
@@ -116,8 +117,11 @@ def main() -> None:
 
     # ---- gap coplanar real del CPWG --------------------------------------
     # Se busca el borde del plano a media altura de la linea, barriendo en X.
+    # El punto de sondeo tiene que caer en un tramo LIMPIO de linea: por debajo
+    # de la fila densa de vias (y = 21.23, radio 0.30) y por encima del primer
+    # condensador shunt (C101, cuyos pads empiezan en y = 23.00).
     fill_f = poly_of(zones["F.Cu"], pcbnew.F_Cu)
-    y_probe = PLANE_Y + 3.0  # dentro del tramo de 5.60 mm, lejos de vias
+    y_probe = 22.30
     step = 0.001
     x = FEED_X + G.FEED_W / 2.0
     while x < FEED_X + 3.0:
@@ -137,7 +141,8 @@ def main() -> None:
 
     # ---- footprints ------------------------------------------------------
     fps = {f.GetReference(): f for f in board.GetFootprints()}
-    check(set(fps) == {"ANT1", "C101", "J1"}, "componentes en la placa",
+    check(set(fps) == {"ANT1", "L101", "C101", "C102", "J1"},
+          "componentes en la placa (red en PI de la referencia SJI)",
           str(sorted(fps)))
 
     ant = fps["ANT1"]
@@ -154,17 +159,42 @@ def main() -> None:
     close(ANT_ORG_Y - 0.0, G.EDGE_TO_ANT_TOP,
           "cobre de antena: 4.00 mm por debajo del borde de placa")
 
-    # C101: la rotacion tiene que dejar el pad 1 hacia la antena
-    c = fps["C101"]
-    cp = {p.GetNumber(): p for p in c.Pads()}
-    check(cp["1"].GetNetname() == "ANT_FEED", "C101 pad 1 hacia la antena (ANT_FEED)",
-          cp["1"].GetNetname())
-    check(cp["2"].GetNetname() == "RF_IN", "C101 pad 2 hacia el radio (RF_IN)",
-          cp["2"].GetNetname())
-    check(cp["1"].GetPosition().y < cp["2"].GetPosition().y,
-          "C101 pad 1 queda arriba (mas cerca de la antena)")
-    close(cp["1"].GetBoundingBox().GetTop() / MM, PLANE_Y + G.CPWG_LEN,
-          f"C101: borde del pad 1 a {G.CPWG_LEN} mm del plano (cota 5.60)")
+    # L101, en serie: la rotacion tiene que dejar el pad 1 hacia la antena
+    lp = {p.GetNumber(): p for p in fps["L101"].Pads()}
+    check(lp["1"].GetNetname() == "ANT_FEED", "L101 pad 1 hacia la antena (ANT_FEED)",
+          lp["1"].GetNetname())
+    check(lp["2"].GetNetname() == "RF_IN", "L101 pad 2 hacia el radio (RF_IN)",
+          lp["2"].GetNetname())
+    check(lp["1"].GetPosition().y < lp["2"].GetPosition().y,
+          "L101 pad 1 queda arriba (mas cerca de la antena)")
+    close(lp["1"].GetBoundingBox().GetTop() / MM, PLANE_Y + G.CPWG_LEN,
+          f"L101: borde del pad 1 a {G.CPWG_LEN} mm del plano (cota 5.60)")
+
+    # C101 y C102, en shunt: pad 1 = GND, pad 2 = linea RF, y el pad 2 tiene que
+    # montar SOBRE la linea. Si no monta, el condensador cuelga de un muñon y su
+    # inductancia serie arruina el shunt.
+    line_x0, line_x1 = FEED_X - G.FEED_W / 2.0, FEED_X + G.FEED_W / 2.0
+    for ref, net_rf in (("C101", "ANT_FEED"), ("C102", "RF_IN")):
+        sp = {p.GetNumber(): p for p in fps[ref].Pads()}
+        check(sp["1"].GetNetname() == "GND", f"{ref} pad 1 (exterior) a GND",
+              sp["1"].GetNetname())
+        check(sp["2"].GetNetname() == net_rf,
+              f"{ref} pad 2 (interior) a la linea RF ({net_rf})",
+              sp["2"].GetNetname())
+        bb = sp["2"].GetBoundingBox()
+        solape = min(bb.GetRight() / MM, line_x1) - max(bb.GetLeft() / MM, line_x0)
+        check(solape > 0.30, f"{ref}: el pad 2 monta sobre la linea RF (sin muñon)",
+              f"solape = {solape:.2f} mm")
+        # via de retorno pegada al pad de GND
+        gbb = sp["1"].GetBoundingBox()
+        d = min(
+            max(gbb.GetLeft() / MM - t.GetPosition().x / MM - VIA_R,
+                t.GetPosition().x / MM - gbb.GetRight() / MM - VIA_R, 0.0)
+            for t in board.GetTracks() if t.Type() == pcbnew.PCB_VIA_T
+            and abs(t.GetPosition().y / MM - gbb.Centre().y / MM) < 0.5
+        )
+        check(d < 0.30, f"{ref}: via de retorno pegada al pad de GND",
+              f"{d:.2f} mm de holgura")
 
     # ---- vias ------------------------------------------------------------
     vias = [t for t in board.GetTracks() if t.Type() == pcbnew.PCB_VIA_T]

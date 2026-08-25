@@ -59,12 +59,34 @@ RF_GAP = G.CPWG_GAP  # 0.15 mm gap coplanar
 
 CAP_PITCH = 0.485
 CAP_PAD = 0.60
-# C101: el borde superior de su pad 1 cae a CPWG_LEN del borde del plano
-C101_Y = PLANE_Y + G.CPWG_LEN + CAP_PAD / 2.0 + CAP_PITCH  # 26.415
-C101_PAD1_Y = C101_Y - CAP_PITCH
-C101_PAD2_Y = C101_Y + CAP_PITCH
 
-COAX_Y = 30.50  # centro de la isla coaxial
+# ---- red de matching -------------------------------------------------------
+# La figura "EVM LSM" del manual de SJI muestra junto al feed de la antena
+# CUATRO designadores: CON101 (conector RF), L101, C101 y C102. O sea que la
+# referencia no lleva un condensador suelto, lleva una red en PI: una posicion
+# SERIE (L101) y dos posiciones SHUNT (C101 en el lado antena, C102 en el lado
+# radio). Poblacion de referencia segun el User Manual FCC 5937666:
+#   L101 = 0 ohm (serie)   C101 = 2.2 pF (shunt)   C102 = DNI
+# Se montan las tres posiciones para que la placa pueda realizar cualquier
+# topologia al ajustar, no solo la de referencia.
+
+# L101, en serie: su pad del lado antena queda a CPWG_LEN del borde del plano,
+# que es donde el plano "1.5 Antenna Dimension" pone la cota de 5.60.
+L101_Y = PLANE_Y + G.CPWG_LEN + CAP_PAD / 2.0 + CAP_PITCH  # 26.415
+L101_PAD1_Y = L101_Y - CAP_PITCH  # 25.93  lado antena
+L101_PAD2_Y = L101_Y + CAP_PITCH  # 26.90  lado radio
+
+# Shunts: el pad interior monta ENCIMA de la linea RF, sin muñon intermedio.
+# Un muñon de 1 o 2 mm añadiria inductancia serie y estropearia justo lo que
+# el condensador tiene que hacer. Sobresale 0.15 mm al otro lado de la linea,
+# lo mismo que el gap del CPWG.
+SHUNT_DX = RF_W / 2.0 + RF_GAP + CAP_PITCH - CAP_PAD / 2.0  # 0.835
+C101_Y = 23.30  # shunt lado antena, entre el borde del plano y L101
+C102_Y = 29.20  # shunt lado radio, entre L101 y la isla coaxial
+SHUNT_VIA_DX = SHUNT_DX + CAP_PITCH + CAP_PAD / 2.0 + 0.13  # via pegada al pad de GND
+
+COAX_Y = 34.00  # centro de la isla coaxial (separada de C102 para que
+                # no se solapen las serigrafias de referencia)
 
 VIA_PAD, VIA_DRILL = 0.60, 0.30
 TRACK_DEFAULT = 0.25
@@ -107,7 +129,21 @@ def add_track(board, x0, y0, x1, y1, width, net, layer=pcbnew.F_Cu):
     return t
 
 
-def add_via(board, x, y, net):
+# Rectangulos donde NO se puede poner costura de vias: los ocupan los
+# componentes del matching y la isla coaxial. Se rellenan en build().
+VIA_FORBIDDEN: list[tuple[float, float, float, float]] = []
+
+
+def via_allowed(x, y) -> bool:
+    r = VIA_PAD / 2.0
+    return not any(x + r > fx0 and x - r < fx1 and y + r > fy0 and y - r < fy1
+                   for fx0, fy0, fx1, fy1 in VIA_FORBIDDEN)
+
+
+def add_via(board, x, y, net, respect_forbidden=False):
+    """respect_forbidden=True omite la via si cae sobre un componente."""
+    if respect_forbidden and not via_allowed(x, y):
+        return None
     via = pcbnew.PCB_VIA(board)
     via.SetPosition(v(x, y))
     via.SetWidth(i(VIA_PAD))
@@ -204,11 +240,25 @@ def build(outdir: Path) -> None:
 
     # ---- nets ------------------------------------------------------------
     gnd = add_net(board, "GND")
-    ant_feed = add_net(board, "ANT_FEED")  # antena <-> C101
-    rf_in = add_net(board, "RF_IN")  # C101 <-> isla coaxial
+    ant_feed = add_net(board, "ANT_FEED")  # antena <-> C101 shunt <-> L101
+    rf_in = add_net(board, "RF_IN")  # L101 <-> C102 shunt <-> isla coaxial
 
     # ---- contorno --------------------------------------------------------
     add_edge_rect(board, 0, 0, BOARD_W, BOARD_H)
+
+    # ---- zonas donde no debe caer costura de vias ------------------------
+    # Los footprints de 0402 y la isla coaxial son de GND en parte, asi que una
+    # via encima no daria error de DRC: quedaria sin marcar y mal. Se excluyen
+    # explicitamente, con 0.25 mm de margen.
+    VIA_FORBIDDEN.clear()
+    m = 0.25
+    for cx, cy, hw, hh in (
+        (FEED_X - SHUNT_DX, C101_Y, 1.00, 0.45),   # C101
+        (FEED_X + SHUNT_DX, C102_Y, 1.00, 0.45),   # C102
+        (FEED_X, L101_Y, 0.45, 1.00),              # L101 (girada)
+        (FEED_X, COAX_Y, 2.60, 1.05),              # J1
+    ):
+        VIA_FORBIDDEN.append((cx - hw - m, cy - hh - m, cx + hw + m, cy + hh + m))
 
     # ---- componentes -----------------------------------------------------
     ant = place(board, ant_lib, "ANT_IFA_915MHz_LSM110A", "ANT1",
@@ -217,10 +267,31 @@ def build(outdir: Path) -> None:
     pad_of(ant, "1").SetNet(ant_feed)
     pad_of(ant, "2").SetNet(gnd)
 
+    # L101: posicion SERIE. Girada -90 para que su pad 1 quede ARRIBA, hacia la
+    # antena. Con +90 pcbnew intercambia los pads y la linea RF entra por el
+    # pad equivocado (ver docs/verificacion.md).
+    l101 = place(board, rf_lib, "C_0402_1005Metric_0G", "L101", "0R",
+                 FEED_X, L101_Y, rot_deg=-90.0, nickname="0G_RF")
+    pad_of(l101, "1").SetNet(ant_feed)
+    pad_of(l101, "2").SetNet(rf_in)
+
+    # C101 y C102: posiciones SHUNT, una a cada lado de la linea. En las dos, el
+    # pad 2 es el interior (linea RF) y el pad 1 el exterior (plano de tierra);
+    # de ahi el giro de 180 en C102.
     c101 = place(board, rf_lib, "C_0402_1005Metric_0G", "C101", "2.2pF",
-                 FEED_X, C101_Y, rot_deg=-90.0, nickname="0G_RF")
-    pad_of(c101, "1").SetNet(ant_feed)
-    pad_of(c101, "2").SetNet(rf_in)
+                 FEED_X - SHUNT_DX, C101_Y, nickname="0G_RF")
+    pad_of(c101, "1").SetNet(gnd)
+    pad_of(c101, "2").SetNet(ant_feed)
+
+    c102 = place(board, rf_lib, "C_0402_1005Metric_0G", "C102", "DNI",
+                 FEED_X + SHUNT_DX, C102_Y, rot_deg=180.0, nickname="0G_RF")
+    pad_of(c102, "1").SetNet(gnd)
+    pad_of(c102, "2").SetNet(rf_in)
+
+    # vias pegadas al pad de tierra de cada shunt: el retorno de un condensador
+    # shunt tiene que ser lo mas corto posible o el shunt no shunta
+    add_via(board, FEED_X - SHUNT_VIA_DX, C101_Y, gnd)
+    add_via(board, FEED_X + SHUNT_VIA_DX, C102_Y, gnd)
 
     coax = place(board, rf_lib, "TP_Coax_50R_NanoVNA", "J1", "50R", FEED_X, COAX_Y,
                  nickname="0G_RF")
@@ -242,11 +313,11 @@ def build(outdir: Path) -> None:
     neck = CAP_PAD  # 0.60
     neck_len = 0.63
 
-    add_track(board, FEED_X, rf_start_y, FEED_X, C101_PAD1_Y - neck_len, RF_W, ant_feed)
-    add_track(board, FEED_X, C101_PAD1_Y - neck_len, FEED_X, C101_PAD1_Y, neck, ant_feed)
+    add_track(board, FEED_X, rf_start_y, FEED_X, L101_PAD1_Y - neck_len, RF_W, ant_feed)
+    add_track(board, FEED_X, L101_PAD1_Y - neck_len, FEED_X, L101_PAD1_Y, neck, ant_feed)
 
-    add_track(board, FEED_X, C101_PAD2_Y, FEED_X, C101_PAD2_Y + neck_len, neck, rf_in)
-    add_track(board, FEED_X, C101_PAD2_Y + neck_len, FEED_X, COAX_Y, RF_W, rf_in)
+    add_track(board, FEED_X, L101_PAD2_Y, FEED_X, L101_PAD2_Y + neck_len, neck, rf_in)
+    add_track(board, FEED_X, L101_PAD2_Y + neck_len, FEED_X, COAX_Y, RF_W, rf_in)
 
     # ---- planos de tierra en las dos capas -------------------------------
     # El keepout del footprint de la antena recorta el relleno por encima de
@@ -262,7 +333,7 @@ def build(outdir: Path) -> None:
     x = 2.00
     while x <= BOARD_W - 2.00:
         if abs(x - FEED_X) > (RF_W / 2.0 + RF_GAP + VIA_PAD / 2.0 + 0.20):
-            add_via(board, x, y_edge_row, gnd)
+            add_via(board, x, y_edge_row, gnd, respect_forbidden=True)
         x += 2.50
 
     # 2) vias coplanares a lo largo del CPWG, a ambos lados
@@ -270,19 +341,19 @@ def build(outdir: Path) -> None:
     y = y_edge_row + 2.00
     while y <= COAX_Y + 2.50:
         for sx in (-1, +1):
-            add_via(board, FEED_X + sx * dx, y, gnd)
+            add_via(board, FEED_X + sx * dx, y, gnd, respect_forbidden=True)
         y += 2.00
 
     # 3) costura perimetral, paso ~8 mm (lambda/20 a 915 MHz)
     per = 8.00
     y = PLANE_Y + 4.00
     while y <= BOARD_H - 2.50:
-        add_via(board, 2.00, y, gnd)
-        add_via(board, BOARD_W - 2.00, y, gnd)
+        add_via(board, 2.00, y, gnd, respect_forbidden=True)
+        add_via(board, BOARD_W - 2.00, y, gnd, respect_forbidden=True)
         y += per
     x = 2.00 + per
     while x <= BOARD_W - 2.50:
-        add_via(board, x, BOARD_H - 2.00, gnd)
+        add_via(board, x, BOARD_H - 2.00, gnd, respect_forbidden=True)
         x += per
 
     # ---- serigrafia ------------------------------------------------------
@@ -294,6 +365,8 @@ def build(outdir: Path) -> None:
         ("Contains FCC ID: 2AS8LLSM110A", 47.0, 1.0, 0.15),
         ("Contains IC: 25119-LSM110A", 49.5, 1.0, 0.15),
         ("CPWG 50R 1.00/0.15", 53.0, 1.0, 0.15),
+        ("L101 serie + C101/C102 shunt", 60.5, 1.0, 0.15),
+        ("ref: L101=0R C101=2.2pF C102=DNI", 63.0, 0.9, 0.14),
         ("J1 = pigtail coax -> NanoVNA", 55.5, 1.0, 0.15),
         ("20 cm min. antena-personas", 58.5, 1.0, 0.15),
     ]

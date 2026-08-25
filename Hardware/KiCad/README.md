@@ -6,7 +6,7 @@ Diseño en KiCad de la antena IFA ranurada del plano **«1.5 Antenna Dimension»
 ![vista previa](export/antenna-geometry-preview.svg)
 
 Todo se genera desde un único fichero de geometría paramétrica y se verifica con el motor
-real de KiCad: **114 comprobaciones, 0 fallos, DRC limpio**.
+real de KiCad: **122 comprobaciones, 0 fallos, DRC limpio**.
 
 ---
 
@@ -39,9 +39,9 @@ libraries/
   0G_Antenna.kicad_sym                      símbolo (2 pines: FEED, GND)
   0G_Antenna.pretty/
     ANT_IFA_915MHz_LSM110A.kicad_mod        la antena: cobre + keepout + documentación
-    ANT_LSM110A_SlotRow_OPTIONAL.kicad_mod  fila de ranuras mecánicas (OPCIONAL, sin cotar)
+    ANT_LSM110A_SlotRow_OPTIONAL.kicad_mod  fila de ranuras (real, pero sin cotar -> OPCIONAL)
   0G_RF.pretty/
-    C_0402_1005Metric_0G.kicad_mod          land 0402 para C101
+    C_0402_1005Metric_0G.kicad_mod          land 0402 para L101 / C101 / C102
     TP_Coax_50R_NanoVNA.kicad_mod           isla de 3 pads para pigtail coaxial
 
 antenna-test-board/                         placa de prueba y ajuste, 50 × 80 mm, DRC = 0
@@ -89,9 +89,17 @@ el hueco a mano.
 El símbolo tiene **dos pines**, y eso es deliberado:
 
 ```
-   RFOUT (pin 33 del LSM110A) ──[ C101 ]── FEED (pin 1)  ANT1
-                                              GND (pin 2) ── GND
+                        L101 (serie)
+   RFOUT (pin 33) ─────[ 0R ]───────┬──── FEED (pin 1)  ANT1
+                    │               │                    GND (pin 2) ── GND
+                  C102            C101                        │
+                  (DNI)         (2.2 pF)                      │
+                    │               │                         │
+                   GND             GND ───────────────────────┘
 ```
+
+Los valores son la población de referencia del User Manual FCC. Las tres posiciones
+existen en la placa de prueba para poder realizar cualquier topología al ajustar.
 
 Una IFA está unida a masa por su stub de cortocircuito, así que ese camino existe de
 verdad y el esquemático debe reflejarlo. El footprint declara los pads 1 y 2 como
@@ -133,16 +141,21 @@ IFA el plano de tierra es el contrapeso, así que medir sobre el mismo plano de 
 referencia es la única forma de que el S11 sea comparable.
 
 Lleva la antena colocada según el plano, plano de tierra en las dos capas, línea CPWG
-50 Ω, C101 en serie y una isla de 3 pads (**J1**) para soldar un pigtail coaxial y medir
-con NanoVNA. El procedimiento de ajuste está en
+50 Ω, la **red de matching en π** de la referencia SJI (`L101` serie + `C101`/`C102`
+shunt, tal como aparece en la figura «EVM LSM») y una isla de 3 pads (**J1**) para soldar
+un pigtail coaxial y medir con NanoVNA — J1 cumple la función del `CON101` del EVM.
+
+El procedimiento de ajuste está en
 [`docs/verificacion.md`](docs/verificacion.md#procedimiento-de-ajuste-con-nanovna).
 
 ## Documentación
 
 - [`docs/geometria-antena.md`](docs/geometria-antena.md) — todas las cotas, cómo se
-  derivan del plano, las **tres discrepancias** encontradas y qué se hizo con cada una.
+  derivan del plano, el **cotejo contra la figura «EVM LSM»** de SJI, y las tres
+  discrepancias encontradas: una resuelta (la red de matching), una corroborada (la fila
+  de ranuras) y una asumida (los 0.02 mm del stub).
 - [`docs/verificacion.md`](docs/verificacion.md) — qué se comprueba y cómo, los
-  **7 errores** que encontró el proceso, y qué **no** cubre.
+  **9 errores** que encontró el proceso, y qué **no** cubre.
 
 ## Estado
 
@@ -150,7 +163,8 @@ con NanoVNA. El procedimiento de ajuste está en
 |---|---|
 | Cadena de cotas | ✅ 17/17 |
 | Footprints (cargados con `pcbnew`) | ✅ 63/63 |
-| Placa: DRC + cotas del cobre real | ✅ 34/34 |
+| Placa: DRC + cotas del cobre real | ✅ 42/42 |
+| Cotejo contra la figura «EVM LSM» de SJI | ✅ 7 cotas, todas cuadran |
 | DRC de la placa de prueba | ✅ 0 violaciones, 0 pads sin conectar, 0 errores de footprint |
 | Cotejo con el Gerber oficial de SJI | ⏳ pendiente de NDA con GREATECH |
 | Medida de S11 | ⏳ pendiente de fabricar la placa de prueba |

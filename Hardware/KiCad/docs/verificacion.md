@@ -1,7 +1,7 @@
 # Verificación
 
 El diseño se verifica ejecutando `tools/build.sh`, que regenera todo desde
-`antenna_geometry.py` y corre **114 comprobaciones**. Devuelve código ≠ 0 si algo falla,
+`antenna_geometry.py` y corre **122 comprobaciones**. Devuelve código ≠ 0 si algo falla,
 así que se puede colgar de CI tal cual.
 
 ```
@@ -17,8 +17,12 @@ o el `pcbnew` de la instalación oficial).
 |---|---|---|
 | Cadena de cotas | 17 | ✅ |
 | Footprints, cargados con el motor de KiCad | 63 | ✅ |
-| Placa: DRC + cotas del cobre real | 34 | ✅ |
-| **Total** | **114** | **✅ 0 fallos** |
+| Placa: DRC + cotas del cobre real | 42 | ✅ |
+| **Total** | **122** | **✅ 0 fallos** |
+
+Además, un cotejo de siete cotas contra la figura «EVM LSM» de SJI, que es una fuente
+independiente del plano cotado: ver
+[`geometria-antena.md`](geometria-antena.md#cotejo-con-la-figura-evm-lsm).
 
 DRC de la placa de prueba: **0 violaciones, 0 pads sin conectar, 0 errores de footprint**
 (`export/drc-report.txt`).
@@ -76,13 +80,20 @@ Corre el DRC con `pcbnew.WriteDRCReport()` y después mide el **cobre ya rellena
   1 µm hasta encontrar el plano: **0.151 mm** a los dos lados (el 0.001 es el paso del
   barrido). Es un parámetro de impedancia, no una holgura de fabricación, así que se mide
   en lugar de suponerse.
-- Cota 5.60: borde del pad de C101 a 25.63 = 20.03 + 5.60.
-- Rotación de C101: pad 1 hacia la antena (`ANT_FEED`) y arriba, pad 2 hacia el radio
-  (`RF_IN`). Esta comprobación existe porque la primera versión los tenía al revés —
-  `SetOrientationDegrees(90)` los intercambia.
+- Cota 5.60: borde del pad del componente serie (`L101`) a 25.63 = 20.03 + 5.60.
+- Rotación de `L101` (la posición serie): pad 1 hacia la antena (`ANT_FEED`) y arriba,
+  pad 2 hacia el radio (`RF_IN`). Esta comprobación existe porque la primera versión los
+  tenía al revés — `SetOrientationDegrees(90)` los intercambia.
+- **Los condensadores shunt montan sobre la línea.** Para `C101` y `C102` se mide el
+  solape entre su pad interior y la pista RF: 0.45 mm cada uno. Si el pad no monta sobre
+  la línea, el condensador queda colgando de un muñón y su inductancia serie arruina
+  justo lo que tiene que hacer. Y se comprueba que cada pad de GND tenga una vía de
+  retorno pegada (0.00 mm de holgura), por lo mismo.
 - Contorno 50 × 80 medido sobre la **línea media** de `Edge.Cuts` (el bounding box incluye
   el ancho de línea; descontarlo o sale 50.10).
-- 47 vías, todas en GND, **0 dentro del área de la antena**.
+- 47 vías, todas en GND, **0 dentro del área de la antena**. La costura general
+  esquiva los footprints del matching y de J1: una vía encima de un pad de GND no daría
+  error de DRC (misma red), quedaría sin marcar y mal.
 - La pista RF arranca fuera del keepout **contando su casquete redondo** de 0.50 mm.
 
 ## Errores que encontró esta verificación
@@ -98,6 +109,8 @@ Se listan porque son la razón de que el proceso valga la pena.
 | 5 | Serigrafía de placa de 51 mm de ancho en una placa de 50 mm | DRC: *silkscreen clipped by board edge* |
 | 6 | Texto de serigrafía de 0.7 mm, por debajo del mínimo de 0.8 | DRC: *text height out of range* |
 | 7 | FPID sin nickname de biblioteca | DRC: *the current configuration does not include the library ''* |
+| 8 | Serigrafías de `C102` y `J1` solapadas al añadir la red en π | DRC: *silkscreen overlap* |
+| 9 | El punto de sondeo del gap coplanar caía sobre un pad de `C101` y medía 0.276 en vez de 0.15 | el propio `verify_board.py`, al añadir los shunts |
 
 El DRC bajó de **16 violaciones a 0**.
 
@@ -143,9 +156,25 @@ es el contrapeso y forma parte de la antena**: medir sobre otro plano da otro re
    del instrumento.
 3. Poblar C101 y medir S11 de 800 a 1000 MHz. La línea RF entre la antena y J1 mide
    ≈ 10 mm (≈ 27° a 915 MHz): descontarla o dejarla registrada como offset.
-4. Barrer C101 con un kit de 0402 (0.5 – 5.6 pF). Es el grado de libertad más rápido y
-   no toca el cobre.
-5. Si con C101 no llega:
+4. Ajustar con la **red en π**, que es el grado de libertad rápido y no toca el cobre.
+   Las tres posiciones están montadas: `L101` en serie, `C101` shunt del lado antena,
+   `C102` shunt del lado radio. Orden recomendado, con un kit de 0402:
+
+   | Paso | Población | Para qué |
+   |---|---|---|
+   | 1 | `L101` = 0 Ω, `C101` = 2.2 pF, `C102` = DNI | la de referencia: punto de partida |
+   | 2 | barrer `C101` de 0.5 a 5.6 pF | mueve la resonancia y la parte reactiva |
+   | 3 | si queda reactancia inductiva, `L101` → condensador serie (0.5 – 10 pF) | L en serie |
+   | 4 | si queda capacitiva, `L101` → inductor (2 – 22 nH) | corrige al otro lado |
+   | 5 | si la parte real no cuadra, poblar `C102` (π completa) | transforma la impedancia |
+
+   Con una IFA lo normal es que baste el paso 2 o el 3. La π completa se reserva para
+   cuando la antena está bien resonada pero la impedancia no es 50 Ω.
+
+   Ojo con una cosa: al medir con el NanoVNA en J1 se está viendo **la antena más la red**.
+   Para saber qué hace la antena sola, quitar `C101`/`C102` y poner 0 Ω en `L101`.
+
+5. Si con la red no llega (la antena resuena demasiado lejos):
    - resuena **alto** → alargar el recorrido de corriente (alargar las ranuras, o sea
      reducir los puentes de 5.50 / 6.00),
    - resuena **bajo** → acortarlo (ensanchar los puentes).

@@ -112,33 +112,90 @@ en JLCPCB) y sin efecto medible a 915 MHz.
 
 **Se implementó 4.03**, para no romper la cadena 20.03 que sí está cotada dos veces.
 
-### 2. C101: serie (plano) vs shunt (expediente FCC del repo)
+### 2. C101: serie (plano) vs shunt (expediente FCC) — resuelto
+
+Al principio parecía un conflicto entre dos fuentes:
 
 - El plano dice: *«Línea de alimentación: 1.00 de ancho, con C101 en serie hacia la
   entrada RF»* (nota 3).
 - `Hardware/certificacion-FCC/README.md` dice: *«Matching network (pin 33 RFOUT → antena):
-  L101 = 0 Ω serie · C101 = 2.2 pF shunt»*.
+  L101 = 0 Ω serie · C101 = 2.2 pF shunt · C102 = DNI»*.
 
-**Se implementó en serie**, siguiendo el plano. Además de ser lo que dice el plano, en una
-IFA el condensador serie hace de bloqueo de DC: el cobre de la antena está unido a masa
-por el stub, así que sin él la salida del PA queda cortocircuitada a masa en continua.
+**La figura «EVM LSM» del manual de SJI lo aclara:** junto al feed de la antena hay
+*cuatro* designadores — `CON101` (conector RF), `L101`, `C101` y `C102`. O sea que la
+referencia no lleva un condensador suelto, lleva una **red en π**: una posición serie y
+dos posiciones shunt. Las dos fuentes hablan de la misma red; el plano simplemente la
+resume por el componente que le queda más a mano.
 
-**Pendiente:** confirmar contra el esquemático de referencia de SJI qué designador va en
-cada posición. Puede que ambas fuentes sean correctas y se refieran a componentes
-distintos de la misma red.
+**Implementado:** las tres posiciones, con la población de referencia como valores por
+defecto.
 
-### 3. Fila de ranuras mecánicas: sin cotar
+| Posición | Designador | Referencia | Función |
+|---|---|---|---|
+| serie | `L101` | 0 Ω | une RFOUT con la antena |
+| shunt, lado antena | `C101` | 2.2 pF | ajuste de la parte reactiva |
+| shunt, lado radio | `C102` | DNI | reservado, permite π completa |
+
+Así la placa de prueba puede realizar **cualquier** topología al ajustar (serie sola, L,
+π), no solo la de referencia. El componente serie va donde el plano pone la cota de 5.60,
+que es la posición que el plano etiquetaba `C101`.
+
+**Queda una pregunta abierta**, que conviene confirmar contra el datasheet del módulo: con
+`L101 = 0 Ω` y una IFA (cuyo cobre está unido a masa por el stub), el pin 33 RFOUT queda
+cortocircuitado a masa **en continua**. Eso es normal si el puerto RF del módulo ya lleva
+bloqueo interno o si su red interna tiene camino de DC a masa, pero hay que verificarlo.
+Si no lo lleva, la posición `L101` admite un condensador serie en lugar del 0 Ω y el
+problema se resuelve sin tocar el cobre.
+
+### 3. Fila de ranuras mecánicas: existe, pero sigue sin cotar
 
 El plano dibuja en magenta cinco ranuras redondeadas en el hueco entre la antena y el
 plano (nota 7: *«Magenta = contorno y ranuras de la PCB»*), pero **no las cota**.
 
-Se entregan aparte, en `ANT_LSM110A_SlotRow_OPTIONAL.kicad_mod`, y **no** forman parte
-del footprint principal. Sus coordenadas salen de medir el trazado, con el arranque de
-las ranuras D y E corrido a la derecha para dejar ≥ 0.35 mm al cobre del feed y del stub.
+**La figura «EVM LSM» las corrobora:** aparecen como una columna de ranuras redondeadas
+entre la antena y el resto de la placa (la antena está girada 90° en el EVM), a 18.5 mm
+del borde y 1.95 mm de ancho — frente a los 17.6 mm y 1.90 mm de esta reconstrucción,
+dentro del error de medir sobre una figura. Así que **son un rasgo real del diseño de
+referencia**, no un artefacto del redibujo.
 
-No se metieron en el footprint principal por criterio: **no se pone un corte mecánico
-cotado a ojo en un contorno de fabricación.** Verificar contra el plano original de SJI y,
-si se confirman, colocar el footprint opcional con el mismo origen que la antena.
+Lo que sigue sin resolver es su **cota exacta**, que ninguna de las dos fuentes da.
+
+Por eso se entregan aparte, en `ANT_LSM110A_SlotRow_OPTIONAL.kicad_mod`, y **no** forman
+parte del footprint principal. Sus coordenadas salen de medir el trazado, con el arranque
+de las ranuras D y E corrido a la derecha para dejar ≥ 0.35 mm al cobre del feed y del
+stub.
+
+El criterio no ha cambiado: **no se pone un corte mecánico cotado a ojo en un contorno de
+fabricación.** Pero ahora sabemos que hay que pedir su cota, no que haya que decidir si
+existen.
+
+## Cotejo con la figura «EVM LSM»
+
+La figura de la placa de evaluación de SJI es una **fuente independiente** del plano
+cotado, así que sirve para comprobar la reconstrucción. La escala se saca del contorno de
+la PCB, que el User Manual FCC da como 50 × 80 mm; en la figura sale apaisada (80 mm de
+ancho), con la antena girada 90° sobre el borde izquierdo.
+
+| Cota | Medida en la figura EVM | Esta reconstrucción | Δ |
+|---|---|---|---|
+| lado corto de la antena | 13.01 mm | **13.00** | +0.01 |
+| lado largo de la antena | 41.0 mm | **39.50** | +1.5 |
+| borde de placa → antena | 4.23 mm | **4.00** | +0.23 |
+| antena centrada en el lado de 50 | 4.49 mm | **5.25** | −0.76 |
+| borde de placa → fila de ranuras | 18.54 mm | **17.57** | +0.97 |
+| ancho de la fila de ranuras | 1.95 mm | **1.90** | +0.05 |
+| extremo de la antena → feed | 4.49 mm | **5.50** | −1.01 |
+
+La escala de la figura es de ~15.5 px/mm, así que leer un borde a ojo cuesta ±0.5 mm y un
+recuadro de resalte morado alrededor de la antena infla su extensión aparente. Con eso en
+mente: **las siete cotas cuadran**, y el lado corto — la que menos ambigüedad tiene porque
+la antena es estrecha — sale a 0.01 mm.
+
+Lo que esto sí demuestra: el tamaño de la antena, su separación al borde, su posición
+centrada, la posición del feed cerca de un extremo y la existencia de la fila de ranuras.
+Lo que **no** demuestra: el número de ranuras internas ni sus longitudes, porque a esa
+escala una ranura de 0.50 mm son 8 px. Para eso la fuente sigue siendo el plano cotado,
+cuya cadena de cotas cierra exacta.
 
 ## Números RF de primer orden
 
