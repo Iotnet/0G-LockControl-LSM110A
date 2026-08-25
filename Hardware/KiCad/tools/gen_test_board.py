@@ -343,9 +343,9 @@ def build(outdir: Path) -> None:
     if len(on_disk["netclass_patterns"]) != 2:
         raise RuntimeError("faltan los patrones de netclase RF")
 
-    n_uuid = normalize_uuids(pcb)
+    n_blocks, n_uuid = canonicalize(pcb)
 
-    print(f"escrito: {pcb}  ({n_uuid} tstamp normalizados)")
+    print(f"escrito: {pcb}  ({n_blocks} bloques ordenados, {n_uuid} tstamp deterministas)")
     print(f"escrito: {pro}  (netclases: {', '.join(names)})")
     print(f"  zonas rellenadas : {len(list(board2.Zones()))}")
     print(f"  pads/vias/pistas : {len(list(board2.GetPads()))} / "
@@ -359,31 +359,143 @@ UUID_RE = re.compile(
 )
 
 
-def normalize_uuids(pcb: Path) -> int:
+# Orden canonico de los bloques de primer nivel. Los que no aparecen aqui se
+# quedan en su sitio, al principio (version, generator, general, paper, layers,
+# setup, net...): son la cabecera del archivo.
+BLOCK_ORDER = {
+    "footprint": 10,
+    "gr_line": 20, "gr_rect": 21, "gr_circle": 22, "gr_arc": 23,
+    "gr_poly": 24, "gr_curve": 25, "gr_text": 26,
+    "dimension": 30,
+    "segment": 40, "arc": 41, "via": 42,
+    "zone": 50,
+    "group": 60,
+}
+
+# Lo mismo dentro de cada `(footprint ...)`. Lo demas (layer, tstamp, at, descr,
+# tags, attr, net_tie_pad_groups, property...) es cabecera y se queda en su sitio.
+FP_CHILD_ORDER = {
+    "fp_text": 10,
+    "fp_line": 20, "fp_rect": 21, "fp_circle": 22, "fp_arc": 23,
+    "fp_poly": 24, "fp_curve": 25,
+    "pad": 30,
+    "zone": 40,
+    "group": 50,
+    "model": 60,
+}
+
+
+def _split_forms(body: str) -> list[str]:
     """
-    Sustituye los UUID aleatorios del .kicad_pcb por otros deterministas.
+    Parte un cuerpo de s-expresiones en sus formas hijas de primer nivel.
 
-    pcbnew asigna un KIID aleatorio a cada item de placa y `m_Uuid` es de solo
-    lectura desde Python, asi que no se pueden fijar al construir. Sin esto,
-    cada ejecucion de build.sh cambiaria los 131 tstamp del archivo y el diff
-    de git seria inservible para revisar un cambio de geometria.
+    Cada forma se devuelve con su indentacion de linea incluida, para que al
+    reordenarlas y volver a unirlas con "\\n" el archivo mantenga el mismo
+    formato que escribio KiCad. Respeta las cadenas entre comillas, asi que un
+    parentesis dentro de un texto no descuadra el conteo.
+    """
+    out, depth, start, in_str, esc = [], 0, None, False, False
+    for i, ch in enumerate(body):
+        if in_str:
+            if esc:
+                esc = False
+            elif ch == "\\":
+                esc = True
+            elif ch == '"':
+                in_str = False
+            continue
+        if ch == '"':
+            in_str = True
+        elif ch == "(":
+            if depth == 0:
+                # retrocede para incluir la indentacion de la linea
+                j = i
+                while j > 0 and body[j - 1] in " \t":
+                    j -= 1
+                start = j
+            depth += 1
+        elif ch == ")":
+            depth -= 1
+            if depth == 0 and start is not None:
+                out.append(body[start:i + 1])
+                start = None
+    return out
 
-    La sustitucion va por ORDEN DE PRIMERA APARICION, que es estable porque el
-    generador crea los items siempre en el mismo orden. Todas las apariciones
-    de un mismo UUID se sustituyen por el mismo valor, asi que las referencias
-    cruzadas dentro del archivo siguen siendo validas.
+
+def _form_name(form: str) -> str:
+    return form.lstrip()[1:].split(None, 1)[0].strip("()")
+
+
+def _canon_form(block: str, order: dict[str, int]) -> str:
+    """Reordena las formas hijas de `block` que aparezcan en `order`."""
+    op = block.index("(")
+    close = block.rindex(")")
+    nl = block.find("\n", op)
+    if nl == -1 or nl > close:
+        return block  # forma de una sola linea: nada que ordenar
+
+    prologue, body, tail = block[:nl + 1], block[nl + 1:close], block[close:]
+    children = _split_forms(body)
+    sortable = [c for c in children if _form_name(c) in order]
+    if not sortable:
+        return block
+
+    header = [c for c in children if _form_name(c) not in order]
+    sortable.sort(key=lambda c: (order[_form_name(c)], UUID_RE.sub("", c)))
+    return prologue + "\n".join(header + sortable) + "\n" + tail
+
+
+def canonicalize(pcb: Path) -> tuple[int, int]:
+    """
+    Deja el .kicad_pcb en una forma canonica, para que build.sh sea reproducible
+    byte a byte y el diff de git de la placa sirva para revisar cambios reales.
+
+    Hacen falta dos pasos, por dos comportamientos distintos de pcbnew:
+
+    1. ORDEN. Al guardar, KiCad ordena los footprints y demas items con un
+       criterio que acaba dependiendo de sus KIID. Como esos KIID son aleatorios
+       en el primer guardado, el orden de los bloques cambia en cada ejecucion.
+       Se reordenan aqui por (tipo, texto sin UUID), que no depende de nada
+       aleatorio. El orden de los hijos de `(kicad_pcb ...)` no tiene
+       significado semantico, asi que reordenarlos es seguro; de todos modos
+       verify_board.py vuelve a cargar el archivo y corre el DRC despues.
+
+    2. UUID. pcbnew asigna un KIID aleatorio a cada item y `m_Uuid` es de solo
+       lectura desde Python, asi que no se pueden fijar al construir. Se
+       sustituyen por uuid5 deterministas, por orden de primera aparicion en el
+       texto YA ordenado. Todas las apariciones de un mismo UUID van al mismo
+       valor, asi que las referencias cruzadas del archivo siguen siendo validas.
+
+    Devuelve (bloques reordenados, UUID sustituidos).
     """
     text = pcb.read_text(encoding="utf-8")
+
+    # KiCad reordena tambien los hijos DENTRO de cada footprint (los fp_text de
+    # documentacion, en concreto), asi que hay que canonicalizar los dos niveles.
+    text = _canon_form(text, BLOCK_ORDER)
+
+    op = text.index("(kicad_pcb")
+    close = text.rindex(")")
+    body = text[text.index("\n", op) + 1:close]
+    blocks = _split_forms(body)
+    if not blocks:
+        raise RuntimeError("no se pudieron separar los bloques del .kicad_pcb")
+
+    n_sorted = 0
+    for block in blocks:
+        if _form_name(block) == "footprint":
+            canon = _canon_form(block, FP_CHILD_ORDER)
+            if canon != block:
+                text = text.replace(block, canon, 1)
+            n_sorted += 1
+
     mapping: dict[str, str] = {}
     for found in UUID_RE.findall(text):
         if found not in mapping:
             mapping[found] = str(uuid.uuid5(UUID_NS, f"test-board:{len(mapping)}"))
 
-    def sub(m):
-        return mapping[m.group(0)]
-
-    pcb.write_text(UUID_RE.sub(sub, text), encoding="utf-8")
-    return len(mapping)
+    pcb.write_text(UUID_RE.sub(lambda m: mapping[m.group(0)], text), encoding="utf-8")
+    return len(blocks), len(mapping)
 
 
 FP_LIB_TABLE = """(fp_lib_table

@@ -160,8 +160,35 @@ es el contrapeso y forma parte de la antena**: medir sobre otro plano da otro re
 ## Regenerar
 
 Todo sale de `antenna_geometry.py`. Para cambiar una cota, se cambia ahí y se corre
-`build.sh`. Los UUID de los footprints son deterministas (`uuid5` con namespace propio),
-así que regenerar sin cambiar geometría **no produce diff en git**.
+`build.sh`.
 
 No editar los `.kicad_mod`, el `.kicad_sym` ni el `.kicad_pcb` a mano: el siguiente
 `build.sh` los sobrescribe.
+
+### El build es reproducible byte a byte
+
+Regenerar sin cambiar la geometría **no produce ningún diff en git**. Así, cuando el diff
+de un fichero generado muestra algo, ese algo es un cambio real de geometría. Conseguirlo
+costó tres cosas, porque pcbnew no lo da gratis:
+
+1. **Footprints y símbolo.** UUID deterministas (`uuid5` con namespace propio del
+   proyecto), asignados al generar el texto. Directo.
+
+2. **UUID de la placa.** pcbnew asigna un KIID aleatorio a cada item y `m_Uuid` es de solo
+   lectura desde Python, así que no se pueden fijar al construir. Se sustituyen a
+   posteriori sobre el texto guardado, por orden de primera aparición. Todas las
+   apariciones de un mismo UUID van al mismo valor, así que las referencias cruzadas del
+   archivo siguen siendo válidas.
+
+3. **Orden de los bloques.** Al guardar, KiCad ordena footprints, pistas, vías y zonas con
+   un criterio que acaba dependiendo de esos KIID aleatorios — y reordena también los
+   hijos *dentro* de cada footprint. Sin tocar nada, el orden de los bloques cambiaba en
+   cada ejecución. `canonicalize()` reordena los dos niveles por *(tipo, texto sin UUID)*,
+   que no depende de nada aleatorio, preservando la indentación. El orden de los hijos de
+   una s-expresión no tiene significado semántico, así que reordenarlos es seguro; y de
+   todos modos `verify_board.py` vuelve a cargar el archivo y corre el DRC justo después.
+
+Los SVG exportados y el informe DRC llevan la fecha de generación, que se normaliza
+también. La fecha real de un artefacto generado es la de su commit.
+
+Comprobado ejecutando `build.sh` tres veces seguidas: mismo MD5 del `.kicad_pcb` las tres.
