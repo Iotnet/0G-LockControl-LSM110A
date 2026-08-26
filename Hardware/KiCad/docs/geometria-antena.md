@@ -4,6 +4,14 @@ Reconstrucción del plano **«1.5 Antenna Dimension»** (antena PCB integrada, c
 como geometría paramétrica en `tools/antenna_geometry.py`, de donde se generan el
 footprint, el símbolo y la placa de prueba.
 
+**Fuente autoritativa:** `SJIT_LSM110A_UserManual_Rev1.4_240626.pdf`, secciones 1.3
+(esquemático), 1.5 (antenna dimension), 1.6 (return loss & VSWR) y 1.9 (EVB radiation →
+conduction change). El manual lleva marca «SJIT CONFIDENTIAL», así que **no se versiona en
+este repositorio**: se cita por nombre y revisión.
+
+La reconstrucción se verificó **píxel a píxel** contra el bitmap original del manual — ver
+[Verificación contra el plano oficial](#verificación-contra-el-plano-oficial).
+
 ## Topología
 
 Es una **IFA (Inverted-F Antenna) de placa ranurada**, no un serpentín de pista fina:
@@ -14,8 +22,8 @@ Es una **IFA (Inverted-F Antenna) de placa ranurada**, no un serpentín de pista
   fuerza el recorrido de corriente en forma de «2».
 - Un **stub en L de cortocircuito** que une la placa con el plano de tierra: es lo que
   hace de esto una IFA y no un monopolo.
-- Una **línea de alimentación de 1.00 mm** pegada al stub, con **C101 en serie** hacia
-  la entrada RF.
+- Una **línea de alimentación de 1.00 mm** pegada al stub, que sale en CPWG 50 Ω hacia la
+  red de matching y de ahí al RFOUT del módulo.
 
 El recorrido de la corriente es:
 
@@ -112,110 +120,202 @@ en JLCPCB) y sin efecto medible a 915 MHz.
 
 **Se implementó 4.03**, para no romper la cadena 20.03 que sí está cotada dos veces.
 
-### 2. C101: serie (plano) vs shunt (expediente FCC) — resuelto
+**Resuelto con el bitmap original:** el borde superior del stub cae en y = 218 px → 12.01 mm,
+y el borde del plano en y = 251 px → 16.03 mm. La propia geometría dibujada mide **4.02 mm**.
+Así que el rótulo de 4.05 es el valor redondeado, y 4.03 es correcto.
 
-Al principio parecía un conflicto entre dos fuentes:
+### 2. C101: serie o shunt — resuelto por el esquemático oficial
 
-- El plano dice: *«Línea de alimentación: 1.00 de ancho, con C101 en serie hacia la
-  entrada RF»* (nota 3).
-- `Hardware/certificacion-FCC/README.md` dice: *«Matching network (pin 33 RFOUT → antena):
-  L101 = 0 Ω serie · C101 = 2.2 pF shunt · C102 = DNI»*.
+Parecía un conflicto entre dos fuentes:
 
-**La figura «EVM LSM» del manual de SJI lo aclara:** junto al feed de la antena hay
-*cuatro* designadores — `CON101` (conector RF), `L101`, `C101` y `C102`. O sea que la
-referencia no lleva un condensador suelto, lleva una **red en π**: una posición serie y
-dos posiciones shunt. Las dos fuentes hablan de la misma red; el plano simplemente la
-resume por el componente que le queda más a mano.
+- La nota 3 del plano dice: *«Línea de alimentación: 1.00 de ancho, con C101 en serie hacia
+  la entrada RF»*.
+- `Hardware/certificacion-FCC/README.md` dice: *«L101 = 0 Ω serie · C101 = 2.2 pF shunt ·
+  C102 = DNI»*.
 
-**Implementado:** las tres posiciones, con la población de referencia como valores por
-defecto.
+**El esquemático de la sección 1.3 del User Manual lo cierra.** La nota del plano está
+equivocada: `C101` es **shunt**, no serie. La red real es:
 
-| Posición | Designador | Referencia | Función |
+```
+CON101 (SMA_3P_ST) pin 3 ──┐
+                           │
+ANT1 pin 1 ────────────────┼── L101 (0R/1005) ──┬── RFOUT
+   (PCB-pattern_Antenna)   │                    │
+ANT1 pin 2 ── (stub a GND) │                    │
+                         C101                 C102
+                     2.2pF/1005             DNI/1005
+                           │                    │
+                          GND                  GND
+```
+
+Así que `certificacion-FCC/README.md` era correcto. Tres cosas que confirma este esquemático
+y que ya están implementadas tal cual:
+
+| Posición | Designador | Referencia | Dónde va |
 |---|---|---|---|
-| serie | `L101` | 0 Ω | une RFOUT con la antena |
-| shunt, lado antena | `C101` | 2.2 pF | ajuste de la parte reactiva |
-| shunt, lado radio | `C102` | DNI | reservado, permite π completa |
+| serie | `L101` | 0 Ω / 1005 | entre el nodo de antena y RFOUT |
+| shunt | `C101` | 2.2 pF / 1005 | lado **antena** |
+| shunt | `C102` | DNI / 1005 | lado **radio** |
 
-Así la placa de prueba puede realizar **cualquier** topología al ajustar (serie sola, L,
-π), no solo la de referencia. El componente serie va donde el plano pone la cota de 5.60,
-que es la posición que el plano etiquetaba `C101`.
+La figura de matching de la sección 1.5 dibuja lo mismo simplificado: colapsa el 0 Ω a un
+cable y omite el DNI, dejando solo `C101` resaltado en rojo por ser el elemento de ajuste.
 
-**Queda una pregunta abierta**, que conviene confirmar contra el datasheet del módulo: con
-`L101 = 0 Ω` y una IFA (cuyo cobre está unido a masa por el stub), el pin 33 RFOUT queda
-cortocircuitado a masa **en continua**. Eso es normal si el puerto RF del módulo ya lleva
-bloqueo interno o si su red interna tiene camino de DC a masa, pero hay que verificarlo.
-Si no lo lleva, la posición `L101` admite un condensador serie en lugar del 0 Ω y el
-problema se resuelve sin tocar el cobre.
+**El símbolo de antena del esquemático oficial tiene DOS pines**, igual que el símbolo de
+este proyecto. El pin 2 es el stub de cortocircuito. Eso valida por separado el enfoque de
+net-tie del footprint.
 
-### 3. Fila de ranuras mecánicas: existe, pero sigue sin cotar
+**`CON101` mide el módulo, no la antena.** Su pin 3 cuelga del nodo *de antena*, así que
+sirve para medida conducida **después** de arrancar la antena y quitar `C101` (sección 1.9).
+En la placa de prueba de este proyecto el puerto de VNA (`J1`) va en el lado **RFOUT**, que
+es el punto correcto para medir la antena: `J1 → C102 → L101 → C101 → antena`, o sea la red
+de referencia con el VNA en el sitio del módulo.
 
-El plano dibuja en magenta cinco ranuras redondeadas en el hueco entre la antena y el
-plano (nota 7: *«Magenta = contorno y ranuras de la PCB»*), pero **no las cota**.
+**Pregunta cerrada — el DC:** con `L101 = 0 Ω` y el stub de la IFA a masa, RFOUT queda
+cortocircuitado a masa en continua. No es un descuido: es lo que hace el diseño certificado
+de SJI, y el S11 medido de la sección 1.6 se tomó justo con esa población. No hace falta
+condensador de bloqueo.
 
-**La figura «EVM LSM» las corrobora:** aparecen como una columna de ranuras redondeadas
-entre la antena y el resto de la placa (la antena está girada 90° en el EVM), a 18.5 mm
-del borde y 1.95 mm de ancho — frente a los 17.6 mm y 1.90 mm de esta reconstrucción,
-dentro del error de medir sobre una figura. Así que **son un rasgo real del diseño de
-referencia**, no un artefacto del redibujo.
+### 3. Fila de ranuras: no es RF, es una línea de troquelado
 
-Lo que sigue sin resolver es su **cota exacta**, que ninguna de las dos fuentes da.
+Las cinco ranuras redondeadas que el plano dibuja en magenta entre la antena y el plano de
+tierra parecían un detalle de RF sin cotar. **No lo son.** La sección 1.9 del User Manual
+(«EVB Radiation → Conduction Change») las explica:
 
-Por eso se entregan aparte, en `ANT_LSM110A_SlotRow_OPTIONAL.kicad_mod`, y **no** forman
-parte del footprint principal. Sus coordenadas salen de medir el trazado, con el arranque
-de las ranuras D y E corrido a la derecha para dejar ≥ 0.35 mm al cobre del feed y del
-stub.
+1. **PCB ANT remove** — se arranca la sección de antena por esa línea
+2. **C101 (Capacitor) remove**
+3. **CON101 RF SMA Connector insertion**
+4. Change complete
 
-El criterio no ha cambiado: **no se pone un corte mecánico cotado a ojo en un contorno de
-fabricación.** Pero ahora sabemos que hay que pedir su cota, no que haya que decidir si
-existen.
+Y el esquemático de la sección 1.3 marca esa misma zona con un recuadro de trazos rotulado
+**«CUT»** que encierra `ANT1` y `C101`. O sea: son la línea por la que se **rompe** la placa
+para pasar de medida radiada a medida conducida en el EVM.
 
-## Cotejo con la figura «EVM LSM»
+Eso explica por qué dejan tan poco material: el borde inferior de las ranuras queda a unos
+**0.2 mm** del borde del plano. No es un error de fabricación, es debilitamiento
+intencional para que rompa por ahí.
 
-La figura de la placa de evaluación de SJI es una **fuente independiente** del plano
-cotado, así que sirve para comprobar la reconstrucción. La escala se saca del contorno de
-la PCB, que el User Manual FCC da como 50 × 80 mm; en la figura sale apaisada (80 mm de
-ancho), con la antena girada 90° sobre el borde izquierdo.
+**Consecuencia de diseño: en el producto NO deben ir.** Una antena pensada para arrancarse
+a mano es un punto de fallo mecánico en una cerradura. Se entregan en un footprint aparte,
+`ANT_LSM110A_BreakAwaySlots_EVM_ONLY`, cuyo nombre ya lo dice.
 
-| Cota | Medida en la figura EVM | Esta reconstrucción | Δ |
+**Cotas medidas** sobre el bitmap original (8.203 px/mm → ±0.12 mm). El plano no las cota,
+así que esto es lo mejor que se puede sacar sin el Gerber:
+
+| Ranura | x inicio | x fin | ancho | qué la limita |
+|---|---|---|---|---|
+| A | −2.50 | 7.31 | 9.81 | 2.7 mm al borde izquierdo de la PCB |
+| B | 10.06 | 20.36 | 10.30 | |
+| C | 23.16 | 33.16 | 10.00 | acaba 0.34 mm antes de la línea de feed |
+| D | 34.93 | 38.22 | 3.29 | entre el feed (34.50) y la pata del stub (38.50) |
+| E | 39.93 | 42.49 | 2.56 | arranca 0.43 mm tras la pata del stub |
+
+Vertical: **y 14.08 … 15.85** (alto **1.77 mm**), o sea 1.08 mm por debajo del cobre de la
+antena y ~0.2 mm por encima del borde del plano.
+
+## Verificación contra el plano oficial
+
+El plano de la sección 1.5 va incrustado en el PDF como **bitmap de 522 × 417 px**, no como
+vector. Escalando por el ancho conocido de la antena (39.50 mm = 324 px) sale **8.203 px/mm**,
+o sea 0.12 mm por píxel. A esa resolución se puede localizar cada borde de cobre y comparar.
+
+El original dibuja el cobre como **contorno** (verde), no relleno, así que cada arista del
+cobre es una línea localizable. Resultado del barrido:
+
+### Niveles verticales — los seis caen exactos
+
+| Rasgo | y del plano | píxel medido | y reconstruido |
 |---|---|---|---|
-| lado corto de la antena | 13.01 mm | **13.00** | +0.01 |
-| lado largo de la antena | 41.0 mm | **39.50** | +1.5 |
-| borde de placa → antena | 4.23 mm | **4.00** | +0.23 |
-| antena centrada en el lado de 50 | 4.49 mm | **5.25** | −0.76 |
-| borde de placa → fila de ranuras | 18.54 mm | **17.57** | +0.97 |
-| ancho de la fila de ranuras | 1.95 mm | **1.90** | +0.05 |
-| extremo de la antena → feed | 4.49 mm | **5.50** | −1.01 |
+| borde superior de la antena | 0.00 | y=119.5 (origen) | **0.00** |
+| ranura 1, borde superior | 5.00 | y=160–162 → 4.94–5.18 | **5.00** |
+| ranura 1, borde inferior | 5.50 | y=164–166 → 5.42–5.67 | **5.50** |
+| ranura 2, borde superior | 10.50 | y=206–207 → 10.54–10.67 | **10.50** |
+| ranura 2, borde inferior | 11.00 | y=209–211 → 10.91–11.15 | **11.00** |
+| borde inferior de la antena | 13.00 | y=226–227 → 12.98–13.10 | **13.00** |
+| borde del plano de tierra | 16.03 | y=251–252 → 16.03–16.15 | **16.03** |
 
-La escala de la figura es de ~15.5 px/mm, así que leer un borde a ojo cuesta ±0.5 mm y un
-recuadro de resalte morado alrededor de la antena infla su extensión aparente. Con eso en
-mente: **las siete cotas cuadran**, y el lado corto — la que menos ambigüedad tiene porque
-la antena es estrecha — sale a 0.01 mm.
+### Aperturas de las ranuras — confirmadas por el mapa de píxeles
 
-Lo que esto sí demuestra: el tamaño de la antena, su separación al borde, su posición
-centrada, la posición del feed cerca de un extremo y la existencia de la fila de ranuras.
-Lo que **no** demuestra: el número de ranuras internas ni sus longitudes, porque a esa
-escala una ranura de 0.50 mm son 8 px. Para eso la fuente sigue siendo el plano cotado,
-cuya cadena de cotas cierra exacta.
+Esto es lo que más importaba, porque define la topología en «2»:
 
-## Números RF de primer orden
+- **Ranura 1, borde izquierdo (x = 0):** hay cobre a y = 5.06 y a y = 5.55, pero **hueco a
+  y = 5.30**. La ranura llega al borde → **abierta a la izquierda** ✔
+- **Ranura 2, borde derecho (x = 39.50):** cobre hasta y = 10.67, **nada entre 10.79 y
+  11.15**, y otra vez cobre desde 12.01. La ranura llega al borde → **abierta a la
+  derecha** ✔, y además el hueco sigue hasta 12.00, lo que confirma que el brazo inferior
+  **no** llega al borde derecho: lo que hay a partir de 12.00 es el stub.
+
+### Extremos horizontales
+
+| Rasgo | medido | reconstruido |
+|---|---|---|
+| ancho del cobre | x 107…431 px = 39.50 | **39.50** |
+| ranura 1: del borde izq. a | x 387 px → 34.15 | **34.00** |
+| ranura 2: arranca en | x 155 px → 5.85 | **6.00** (puente izquierdo) |
+| brazo inferior, borde derecho | x 390 px → 34.50 | **34.50** |
+| stub, borde superior | y 218 px → 12.01, x 391…432 | **12.00**, x 34.50…39.50 |
+| stub, pata vertical (borde izq.) | x 423 px → 38.52 | **38.50** |
+| línea de feed (bordes) | x 382 → 33.53 y x 390 → 34.50 | **33.50 / 34.50** |
+| **gap coplanar del CPWG** | x 380–381 → 33.28–33.40, junto a 33.53 | **0.15** |
+| plano de tierra (bordes) | x 69 → −4.63 y x 472 → 44.50 | ancho ≈ **50.00**, antena centrada |
+
+El gap del CPWG aparece dibujado en el propio plano de la antena: hay una línea de plano a
+0.13 mm del borde de la línea de feed, a los dos lados. Coincide con el 1.00 / 0.15 que da
+el User Manual para la línea RF.
+
+### El stub sí toca el plano
+
+En el nivel del borde del plano (y = 16.03) la línea de contorno se **interrumpe** entre
+x = 38.65 y x = 39.50 — justo el ancho de la pata del stub. O sea que el cobre del stub y el
+del plano son la misma pieza: **el cortocircuito a masa de la IFA está en el plano original**.
+Y se interrumpe otra vez entre x = 33.65 y 34.50, donde cruza la línea de feed, que ahí sí
+va aislada por el gap del CPWG.
+
+Conclusión: **la reconstrucción coincide con el plano oficial en todos los rasgos medibles.**
+Lo que el bitmap no puede resolver es el detalle por debajo de ~0.12 mm (radios de esquina,
+compensaciones de grabado). Para eso seguiría haciendo falta el Gerber.
+
+## Comportamiento RF medido (sección 1.6 del User Manual)
+
+Ya no hay que especular con la frecuencia de resonancia: SJI publica el S11 y el VSWR
+medidos de esta antena, con la población de referencia (`L101` = 0 Ω, `C101` = 2.2 pF,
+`C102` = DNI) sobre la PCB de 50 × 80 mm. Barrido de 700 MHz a 1.1 GHz.
+
+| Frecuencia | S11 | VSWR | |
+|---|---|---|---|
+| 863.0 MHz | −8.00 dB | 2.33 | EU868 |
+| 865.0 MHz | −8.27 dB | 2.26 | EU868 |
+| 868.1 MHz | −8.69 dB | 2.17 | EU868 |
+| **902.1 MHz** | **−16.43 dB** | **1.37** | RC2/RC4, borde inferior |
+| **921.6 MHz** | **−17.6 dB** | ~1.3 | RC2/RC4 |
+| **928.0 MHz** | **−29.28 dB** | ~1.07 | RC2/RC4, borde superior |
+
+Lo que se lee de ahí:
+
+- **En 902 – 928 MHz el S11 está por debajo de −16 dB en toda la banda.** Muy holgado
+  frente al −10 dB habitual como objetivo. La antena está bien resuelta para RC2/RC4.
+- **La resonancia cae justo por encima de 928 MHz** (el fondo del pozo del barrido está
+  fuera de la banda, hacia ~935–945 MHz). Es decir: la banda de trabajo se apoya en el
+  flanco de la resonancia, no en su fondo. Eso es normal y le da ancho de banda.
+- **Para EU868 esta antena NO sirve tal cual:** −8.7 dB a 868 MHz es VSWR 2.17, o sea ~13 %
+  de la potencia reflejada. Habría que alargar el recorrido de corriente (reducir los
+  puentes de 5.50 / 6.00) y volver a ajustar. Por eso el footprint ya no lleva la etiqueta
+  «868MHz» que tenía al principio.
+
+### Geometría en longitudes de onda
 
 A 915 MHz, λ₀ = 327.6 mm.
 
 | | |
 |---|---|
 | Huella de la antena | 39.50 × 13.00 mm = 0.121 λ₀ × 0.040 λ₀ |
-| Plano de tierra (referencia 50×80) | 50 × 60 mm = 0.153 λ₀ × 0.183 λ₀ |
+| Plano de tierra (referencia 50 × 80) | 50 × 60 mm = 0.153 λ₀ × 0.183 λ₀ |
 | Recorrido de corriente (línea media) | ≈ 112 mm |
-| ε_eff estimada (sin plano debajo) | ≈ (1 + 4.3)/2 = 2.65 → λ_eff ≈ 201 mm, λ_eff/4 ≈ 50 mm |
 
-**Lo que estos números NO dicen:** la frecuencia de resonancia. Los brazos miden 5 mm de
-ancho (0.025 λ₀) y las ranuras solo 0.50 mm, así que la corriente no sigue la línea media
-y el acoplamiento capacitivo a través de las ranuras es fuerte. La estimación de 112 mm
-por línea media sobreestima mucho la longitud eléctrica; la resonancia real la fijan las
-longitudes de ranura y ese acoplamiento.
-
-Sirven para comparar variantes del diseño entre sí. **No sustituyen a medir**, ni a una
-simulación EM. El procedimiento de ajuste está en `verificacion.md`.
+El recorrido por línea media (112 mm) **no** predice la resonancia: los brazos miden 5 mm
+de ancho (0.025 λ₀) y las ranuras solo 0.50 mm, así que la corriente no sigue la línea media
+y el acoplamiento capacitivo a través de las ranuras es fuerte. Sirve para comparar
+variantes entre sí, nada más. Para predecir hace falta un solver EM; para saberlo, la tabla
+de arriba.
 
 ## Requisitos de integración que hereda el footprint
 

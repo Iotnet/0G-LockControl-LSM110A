@@ -6,7 +6,7 @@ Genera los footprints KiCad de la antena a partir de antenna_geometry.py.
 
 Salida:
     ANT_IFA_915MHz_LSM110A.kicad_mod        antena completa (cobre + keepout + doc)
-    ANT_LSM110A_SlotRow_OPTIONAL.kicad_mod  fila de ranuras mecanicas (opcional)
+    ANT_LSM110A_BreakAwaySlots_EVM_ONLY.kicad_mod  troquelado del EVM (NO en el producto)
 
 Formato: KiCad 7 (version 20221018), compatible con KiCad 7/8/9.
 La sintaxis exacta se verifico contra la salida de pcbnew.IO_MGR (ver docs/verificacion.md).
@@ -104,7 +104,7 @@ def rule_area(tag, name, rect, layers="F&B.Cu"):
 FP_NAME = "ANT_IFA_915MHz_LSM110A"
 
 DESCR = (
-    "Antena IFA ranurada integrada en PCB para LSM110A (Sigfox RC2/RC4, 902-928 MHz). "
+    "Antena IFA ranurada integrada en PCB para LSM110A. Banda 902-928 MHz (Sigfox RC2/RC4): el S11 medido por SJI da -16.4 dB a 902.1 MHz, -17.6 dB a 921.6 MHz y -29.3 dB a 928 MHz. NO sirve para EU868 sin reajustar: a 868.1 MHz el S11 de referencia es solo -8.7 dB (VSWR 2.17). "
     "Redibujo parametrico del plano '1.5 Antenna Dimension': placa 39.50 x 13.00 mm con dos "
     "ranuras de 0.50 mm que fuerzan un recorrido de corriente en forma de '2', stub en L de "
     "cortocircuito a GND y linea de alimentacion de 1.00 mm. Todo el cobre es un solo poligono. "
@@ -114,7 +114,7 @@ DESCR = (
     "a proposito por el stub, como en cualquier IFA."
 )
 
-TAGS = "antenna IFA PCB 915MHz 868MHz sub-GHz Sigfox LoRa LSM110A net-tie"
+TAGS = "antenna IFA PCB 915MHz 902-928 sub-GHz Sigfox RC2 RC4 LSM110A net-tie"
 
 
 def build_antenna() -> str:
@@ -202,15 +202,18 @@ def build_antenna() -> str:
 
 # ---------------------------------------------------------------- slot row
 
-SLOT_FP_NAME = "ANT_LSM110A_SlotRow_OPTIONAL"
+SLOT_FP_NAME = "ANT_LSM110A_BreakAwaySlots_EVM_ONLY"
 
 SLOT_DESCR = (
-    "OPCIONAL - fila de 5 ranuras mecanicas en el hueco entre la antena y el plano de tierra, "
-    "dibujadas en magenta en el plano '1.5 Antenna Dimension' (nota 7). ATENCION: en el plano "
-    "NO llevan cota, estas coordenadas salen de medir el trazado, con el arranque de las ranuras "
-    "D y E corrido a la derecha para dejar >= 0.35 mm al cobre del feed y del stub. Verificar "
-    "contra el plano original de SJI antes de fabricar. Se coloca con el MISMO origen que "
-    "ANT_IFA_915MHz_LSM110A (esquina superior izquierda del cobre de la antena)."
+    "SOLO EVM - NO PONER EN EL PRODUCTO. Fila de 5 ranuras redondeadas entre la antena y "
+    "el plano de tierra. No es un detalle de RF: es la linea por la que se ARRANCA la antena. "
+    "La seccion 1.9 del User Manual LSM110A ('EVB Radiation -> Conduction Change') lo detalla: "
+    "(1) PCB ANT remove, (2) C101 remove, (3) CON101 RF SMA connector insertion; y el "
+    "esquematico marca esa zona con un recuadro 'CUT' que encierra ANT1 y C101. Sirve para "
+    "pasar la placa de evaluacion de medida radiada a medida conducida. En una cerradura, una "
+    "antena que se puede romper a mano es un punto de fallo mecanico. Cotas medidas sobre el "
+    "bitmap original del manual (8.203 px/mm), incertidumbre +/-0.12 mm: el plano NO las cota. "
+    "Se coloca con el MISMO origen que ANT_IFA_915MHz_LSM110A."
 )
 
 
@@ -220,7 +223,7 @@ def build_slotrow() -> str:
     L.append(f'(footprint "{SLOT_FP_NAME}" (version 20221018) (generator 0g_antenna_gen)')
     L.append('  (layer "F.Cu")')
     L.append(f'  (descr "{SLOT_DESCR}")')
-    L.append('  (tags "PCB slot cutout antenna keepout LSM110A opcional")')
+    L.append('  (tags "PCB slot break-away cutout antenna LSM110A EVM-only")')
     L.append('  (attr exclude_from_pos_files exclude_from_bom)')
 
     cx = G.ANT_W / 2.0
@@ -241,7 +244,7 @@ def build_slotrow() -> str:
         # copia en F.Fab para que se vea en el editor sin activar Edge.Cuts
         L.append(fp_rect(tag, f"{name}_fab", x0, y0, x1, y1, "F.Fab", 0.05))
 
-    L.append(fp_text(tag, "user", "OPCIONAL - cotas trazadas, verificar plano SJI",
+    L.append(fp_text(tag, "user", "SOLO EVM: linea de troquelado, no poner en el producto",
                      cx, y1 + 2.4, "Cmts.User", 0.6, 0.1))
     L.append(")")
     return "\n".join(L) + "\n"

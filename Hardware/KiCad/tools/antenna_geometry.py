@@ -199,27 +199,32 @@ KEEPOUT = _rect(BOARD_LEFT, BOARD_TOP, BOARD_RIGHT, Y_GND)
 
 
 # --------------------------------------------------------------------------
-# Fila de ranuras mecanicas de la PCB (OPCIONAL - trazada, no cotada)
+# Fila de ranuras de TROQUELADO (solo EVM - ver docs/geometria-antena.md)
 # --------------------------------------------------------------------------
-# El plano dibuja en magenta 5 ranuras redondeadas en el hueco antena-plano
-# (nota 7: "Magenta = contorno y ranuras de la PCB"). NO llevan cota, asi que
-# estos valores salen de medir el trazado. Se entregan en un footprint aparte
-# y NO forman parte del footprint principal de la antena.
+# Las 5 ranuras redondeadas que el plano dibuja en magenta entre la antena y el
+# plano de tierra NO son un detalle de RF: son la linea por la que se ARRANCA la
+# antena. La seccion 1.9 del User Manual ("EVB Radiation -> Conduction Change")
+# lo deja explicito: (1) PCB ANT remove, (2) C101 remove, (3) CON101 RF SMA
+# connector insertion. El esquematico marca esa misma zona con un recuadro "CUT"
+# que encierra ANT1 y C101.
 #
-# Ajustes respecto a la medicion directa: el arranque de la ranura D y de la E
-# se corrio a la derecha para dejar >= 0.35 mm de clearance al cobre del feed
-# (x 33.50..34.50) y a la pata del stub (x 38.50..39.50).
+# Consecuencia de diseno: en el PRODUCTO no deben ir. Una antena pensada para
+# romperse a mano es un punto de fallo mecanico en una cerradura.
+#
+# Cotas MEDIDAS sobre el bitmap original del User Manual Rev 1.4 (522 x 417 px,
+# escala 8.203 px/mm -> resolucion 0.12 mm/px). Ya no son valores a ojo, pero
+# siguen sin estar cotadas en el plano: la incertidumbre es +/-0.12 mm.
 
-SLOTROW_H = 1.90
-SLOTROW_Y0 = Y_BOT + (ANT_TO_GND - SLOTROW_H) / 2.0  # 13.565 -> centrada en el hueco
-SLOTROW_Y1 = SLOTROW_Y0 + SLOTROW_H  # 15.465
+SLOTROW_Y0 = 14.08  # borde superior, 1.08 mm por debajo del cobre de la antena
+SLOTROW_Y1 = 15.85  # borde inferior, ~0.2 mm por encima del borde del plano
+SLOTROW_H = SLOTROW_Y1 - SLOTROW_Y0  # 1.77
 
 SLOTROW_X = [
-    ("A", -2.55, 7.80),
-    ("B", 10.75, 20.70),
-    ("C", 22.80, 33.15),
-    ("D", 34.85, 38.05),
-    ("E", 39.85, 42.25),
+    ("A", -2.50, 7.31),
+    ("B", 10.06, 20.36),
+    ("C", 23.16, 33.16),   # termina 0.34 mm antes del feed  (x 33.50)
+    ("D", 34.93, 38.22),   # entre feed (34.50) y pata del stub (38.50)
+    ("E", 39.93, 42.49),   # arranca 0.43 mm despues de la pata del stub
 ]
 
 

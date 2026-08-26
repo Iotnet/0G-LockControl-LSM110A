@@ -20,9 +20,10 @@ o el `pcbnew` de la instalación oficial).
 | Placa: DRC + cotas del cobre real | 42 | ✅ |
 | **Total** | **122** | **✅ 0 fallos** |
 
-Además, un cotejo de siete cotas contra la figura «EVM LSM» de SJI, que es una fuente
-independiente del plano cotado: ver
-[`geometria-antena.md`](geometria-antena.md#cotejo-con-la-figura-evm-lsm).
+Además, una verificación **píxel a píxel contra el plano oficial** del User Manual
+LSM110A Rev 1.4 (sección 1.5): los seis niveles verticales, las dos aperturas de ranura, los
+extremos horizontales y hasta el gap del CPWG caen donde los pone esta reconstrucción. Ver
+[`geometria-antena.md`](geometria-antena.md#verificación-contra-el-plano-oficial).
 
 DRC de la placa de prueba: **0 violaciones, 0 pads sin conectar, 0 errores de footprint**
 (`export/drc-report.txt`).
@@ -65,8 +66,10 @@ parser de KiCad — y mide sobre el `SHAPE_POLY_SET` efectivo del pad:
   cubierto por la máscara de soldadura, no expuesto.
 - **Rule area**: prohíbe plano, vías y pistas; **permite** pads (si no, marcaría el cobre
   de la propia antena); presente en `F.Cu` y `B.Cu`; sus cuatro bordes en su sitio.
-- La fila de ranuras opcional: 5 × 4 tramos en `Edge.Cuts` y ≥ 0.30 mm de holgura al
-  cobre del feed y del stub.
+- La fila de troquelado del EVM: 5 × 4 tramos en `Edge.Cuts` y ≥ 0.25 mm de holgura al
+  cobre del feed y de la pata del stub. El umbral es 0.25 y no más porque las cotas
+  **medidas** del plano dejan 0.28 mm entre la ranura D y la pata del stub: es una línea
+  pensada para romper, no para respetar holguras generosas.
 
 ### 3. Placa (`verify_board.py`)
 
@@ -134,15 +137,40 @@ que los `.kicad_mod` se escriben a mano. La sintaxis canónica se extrajo hacien
 
 Importante tenerlo claro:
 
-- **La frecuencia de resonancia.** Nada de esto predice dónde resuena la antena. Hace
-  falta un solver EM (openEMS, HFSS, CST) o medirla.
+- **La frecuencia de resonancia de la placa fabricada.** Nada de esto la predice. Lo que
+  sí hay ahora es contra qué compararla: el S11 medido de la referencia (arriba).
 - **Que el redibujo coincida con el Gerber oficial de SJI.** Se verificó contra el plano
-  que se entregó, no contra el Gerber de la antena certificada. Ver el aviso de
-  certificación en el README.
+  cotado del User Manual, píxel a píxel, y coincide en todos los rasgos medibles. Lo que el
+  bitmap del manual no resuelve es el detalle por debajo de ~0.12 mm: radios de esquina,
+  compensaciones de grabado. Ver el aviso de certificación en el README.
 - **La impedancia real del CPWG.** Los 50 Ω vienen del User Manual FCC para 1.00 / 0.15 /
   FR4 1.6 mm / εr 4.3. La geometría se verifica; el valor de impedancia se hereda de esa
   fuente y depende del stack-up real del fabricante.
 - **Las cotas de la fila de ranuras opcional**, que no están cotadas en el plano.
+
+## Criterio de aceptación de la medida
+
+La sección 1.6 del User Manual publica el S11 y el VSWR **medidos** de esta antena, con la
+población de referencia sobre la PCB de 50 × 80 mm. Eso convierte el ajuste en un
+pass/fail cuantitativo en lugar de un «parece que va bien»:
+
+| Frecuencia | S11 de referencia (SJI) | Objetivo en la placa fabricada |
+|---|---|---|
+| 902.1 MHz | −16.43 dB | ≤ −10 dB, y a menos de ~3 dB de la referencia |
+| 921.6 MHz | −17.6 dB | ídem |
+| 928.0 MHz | −29.28 dB | ídem |
+| 868.1 MHz | −8.69 dB | *no* es banda de trabajo; sirve de comprobación de forma |
+
+Si la placa fabricada reproduce esa curva, el redibujo queda **validado eléctricamente**, no
+solo geométricamente. Si la resonancia sale desplazada, la diferencia apunta a la geometría
+o al stack-up del fabricante (εr real, espesor), no al método.
+
+Ojo con dos cosas al comparar:
+
+- La referencia se midió en el nodo **RFOUT**, con `L101` = 0 Ω, `C101` = 2.2 pF y
+  `C102` sin poblar. Hay que medir con esa misma población.
+- La referencia no lleva los ~10 mm de línea RF que esta placa mete entre la antena y `J1`.
+  Son ≈ 27° a 915 MHz: hay que descontarlos o dejarlos anotados como offset.
 
 ## Procedimiento de ajuste con NanoVNA
 

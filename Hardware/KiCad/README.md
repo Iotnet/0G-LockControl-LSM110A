@@ -1,7 +1,12 @@
 # Antena PCB en KiCad — `ANT_IFA_915MHz_LSM110A`
 
 Diseño en KiCad de la antena IFA ranurada del plano **«1.5 Antenna Dimension»**, para el
-0G LockControl (LSM110A, Sigfox RC2/RC4, 902 – 928 MHz).
+0G LockControl (LSM110A, Sigfox RC2/RC4, **902 – 928 MHz**).
+
+> Reconstruida y **verificada píxel a píxel contra el plano oficial** del
+> `SJIT_LSM110A_UserManual_Rev1.4`. Esa banda no es una elección: el S11 medido por SJI da
+> ≤ −16 dB en 902 – 928 MHz y solo −8.7 dB a 868 MHz, así que **para EU868 hay que
+> reajustar**.
 
 ![vista previa](export/antenna-geometry-preview.svg)
 
@@ -12,23 +17,28 @@ real de KiCad: **122 comprobaciones, 0 fallos, DRC limpio**.
 
 ## ⚠️ Aviso de certificación — leer antes de usarlo en producción
 
-Este footprint es un **redibujo** del plano que se entregó. La certificación modular FCC
-del LSM110A (FCC ID `2AS8LLSM110A`) cubre **únicamente el patrón «EVB_LSM ANT» de SJI**, y
-su Gerber es confidencial: hay que pedirlo a GREATECH o a SJI bajo NDA
-(ver [`Hardware/certificacion-FCC/README.md`](../certificacion-FCC/README.md)).
+Este footprint es un **redibujo**. La certificación modular FCC del LSM110A
+(FCC ID `2AS8LLSM110A`) cubre **únicamente el patrón «EVB_LSM ANT» de SJI**.
 
-`docs/especificaciones-diseno-pcb.md` ya lo pide explícitamente:
-*«Antena importada del Gerber oficial SJI (NO redibujada a mano)»*.
+Dónde estamos, con precisión:
 
-Qué significa en la práctica:
-
-- ✅ **Sirve ya** para prototipar, medir, ajustar con NanoVNA y cerrar la geometría del
-  producto.
-- ❌ **No basta** para apoyarse en la certificación modular. Antes de fabricar la versión
-  final hay que **superponer este cobre con el Gerber oficial** y confirmar que coincide.
-  Si no coincide, o el producto se recertifica, o se sustituye por el patrón oficial.
-- El footprint está parametrizado precisamente para que ese cotejo sea barato: se corrige
-  la cota en `tools/antenna_geometry.py` y se regenera todo.
+- ✅ **La geometría coincide con el plano oficial de SJI** (User Manual Rev 1.4 § 1.5),
+  verificada píxel a píxel sobre el bitmap original: los seis niveles verticales, las dos
+  aperturas de ranura, los extremos horizontales y el gap del CPWG. No queda ninguna cota
+  en duda.
+- ✅ **La red de matching coincide con el esquemático oficial** (§ 1.3): `L101` 0 Ω serie,
+  `C101` 2.2 pF shunt lado antena, `C102` DNI shunt lado radio.
+- ⚠️ **Lo que el plano no resuelve** es el detalle por debajo de ~0.12 mm: radios de
+  esquina y compensaciones de grabado. Para eso sigue haciendo falta el **Gerber**, que es
+  confidencial (pedirlo a GREATECH o SJI bajo NDA — ver
+  [`certificacion-FCC/README.md`](../certificacion-FCC/README.md)).
+- ⚠️ **Para apoyarse en la certificación modular**, la decisión no es de ingeniería sino
+  del expediente: hay que confirmar con el certificador si «igual al plano cotado del
+  fabricante» basta, o si exige el Gerber. `docs/especificaciones-diseno-pcb.md` pide lo
+  segundo: *«Antena importada del Gerber oficial SJI (NO redibujada a mano)»*.
+- ✅ **Hay criterio de aceptación eléctrico:** el S11 medido de SJI (§ 1.6) está en
+  [`docs/verificacion.md`](docs/verificacion.md#criterio-de-aceptación-de-la-medida). Si la
+  placa fabricada reproduce esa curva, el redibujo queda validado también eléctricamente.
 
 ---
 
@@ -39,7 +49,7 @@ libraries/
   0G_Antenna.kicad_sym                      símbolo (2 pines: FEED, GND)
   0G_Antenna.pretty/
     ANT_IFA_915MHz_LSM110A.kicad_mod        la antena: cobre + keepout + documentación
-    ANT_LSM110A_SlotRow_OPTIONAL.kicad_mod  fila de ranuras (real, pero sin cotar -> OPCIONAL)
+    ANT_LSM110A_BreakAwaySlots_EVM_ONLY     linea de troquelado del EVM - NO en el producto
   0G_RF.pretty/
     C_0402_1005Metric_0G.kicad_mod          land 0402 para L101 / C101 / C102
     TP_Coax_50R_NanoVNA.kicad_mod           isla de 3 pads para pigtail coaxial
@@ -164,9 +174,11 @@ El procedimiento de ajuste está en
 | Cadena de cotas | ✅ 17/17 |
 | Footprints (cargados con `pcbnew`) | ✅ 63/63 |
 | Placa: DRC + cotas del cobre real | ✅ 42/42 |
-| Cotejo contra la figura «EVM LSM» de SJI | ✅ 7 cotas, todas cuadran |
+| Cotejo píxel a píxel contra el plano oficial (§1.5) | ✅ todos los rasgos medibles |
+| Red de matching contra el esquemático oficial (§1.3) | ✅ L101 / C101 / C102 confirmados |
 | DRC de la placa de prueba | ✅ 0 violaciones, 0 pads sin conectar, 0 errores de footprint |
-| Cotejo con el Gerber oficial de SJI | ⏳ pendiente de NDA con GREATECH |
+| Gerber oficial de SJI (detalle < 0.12 mm) | ⏳ pendiente de NDA con GREATECH |
+| S11 de referencia como criterio de aceptación | ✅ §1.6 del User Manual |
 | Medida de S11 | ⏳ pendiente de fabricar la placa de prueba |
 
 Generado y verificado con KiCad 7.0.11. Formato de fichero compatible con KiCad 7/8/9.

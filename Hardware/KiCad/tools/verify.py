@@ -163,7 +163,7 @@ def verify_antenna(lib: Path) -> None:
 
 
 def verify_slotrow(lib: Path) -> None:
-    name = "ANT_LSM110A_SlotRow_OPTIONAL"
+    name = "ANT_LSM110A_BreakAwaySlots_EVM_ONLY"
     io = pcbnew.IO_MGR.PluginFind(pcbnew.IO_MGR.KICAD_SEXP)
     fp = io.FootprintLoad(str(lib), name)
     if not check(fp is not None, f"{name}: KiCad carga el footprint sin errores"):
@@ -185,8 +185,8 @@ def verify_slotrow(lib: Path) -> None:
         for cu_x0, cu_x1, what in ((G.FEED_X0, G.FEED_X1, "feed"),
                                    (G.STUB_LEG_X0, G.STUB_LEG_X1, "stub")):
             overlap = min(sx1, cu_x1) - max(sx0, cu_x0)
-            check(overlap <= -0.30,
-                  f"ranura {gname} deja >= 0.30 mm al cobre del {what}",
+            check(overlap <= -0.25,
+                  f"ranura {gname} deja >= 0.25 mm al cobre del {what}",
                   f"holgura = {-overlap:.2f} mm" if overlap < 0 else f"SOLAPE {overlap:.2f} mm")
 
 
