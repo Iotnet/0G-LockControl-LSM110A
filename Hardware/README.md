@@ -22,11 +22,23 @@ Hojas de datos de los componentes principales: LSM110A, reed switch, regulador L
 
 ### KiCad/
 Diseño en KiCad de la [antena IFA ranurada integrada en PCB](KiCad/README.md)
-(`ANT_IFA_915MHz_LSM110A`), reconstruida del plano «1.5 Antenna Dimension»: footprint,
-símbolo, placa de prueba para ajuste con NanoVNA y generadores paramétricos. Todo se
-regenera y verifica con `KiCad/tools/build.sh` (122 comprobaciones, DRC = 0).
+(`ANT_IFA_915MHz_LSM110A`), reconstruida del plano «1.5 Antenna Dimension»: generadores
+paramétricos, placa de prueba para ajuste con NanoVNA, y la documentación de geometría y
+verificación. Todo se regenera y verifica con `KiCad/tools/build.sh`
+(122 comprobaciones, DRC = 0).
 **Ojo:** es un redibujo, no el Gerber oficial de SJI — ver el aviso de certificación del
 README.
+
+Las **bibliotecas** que produce no se quedan ahí: van a
+[`v0-replica-sji/kicad-lib/`](v0-replica-sji/kicad-lib/README.md), junto al LSM110A, para que
+KiCad necesite **un solo path registrado** y el módulo, la antena y los componentes RF salgan
+todos bajo el nickname `0G-LockControl`.
+
+### v0-replica-sji/
+Fase de réplica de la placa de referencia de SJI: fuente de verdad documental
+(`00-fuente-de-verdad/`, con las [cotas de la antena](v0-replica-sji/00-fuente-de-verdad/antena-cotas.md))
+y la **casa única de las bibliotecas KiCad** del proyecto
+([`kicad-lib/`](v0-replica-sji/kicad-lib/README.md)): LSM110A, antena y componentes RF.
 
 ### validation/
 Evidencia de los gates de validación de hardware. `gate2-tx-pulse/` contiene la

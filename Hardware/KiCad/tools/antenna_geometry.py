@@ -27,6 +27,36 @@ Cadena de cotas vertical (del plano)
 from __future__ import annotations
 
 # --------------------------------------------------------------------------
+# Donde se publican las bibliotecas KiCad  (no son cotas)
+# --------------------------------------------------------------------------
+# El proyecto tiene UNA sola casa de bibliotecas: la misma carpeta donde vive el
+# LSM110A. Asi KiCad necesita un unico path registrado y el LSM110A, la antena y
+# los componentes RF salen todos bajo el mismo nickname de footprints.
+#
+# Se define aqui, y no en cada generador, porque son cuatro scripts los que
+# tienen que coincidir: si la ruta se repitiera en cada uno, tarde o temprano
+# uno escribiria en un sitio y otro leeria de otro.
+#
+# Ruta relativa a la carpeta tools/. Verificado: KiCad enumera footprints en una
+# carpeta PLANA, sin necesidad de que se llame ".pretty".
+
+LIB_DIR = "../../v0-replica-sji/kicad-lib"
+FP_LIB_NICKNAME = "0G-LockControl"  # footprints: la carpeta kicad-lib entera
+SYM_LIB_NICKNAME = "0G-Antenna"     # simbolos: el archivo 0G_Antenna.kicad_sym
+SYM_LIB_FILE = "0G_Antenna.kicad_sym"
+
+
+def lib_dir(script_file: str):
+    """
+    Carpeta de bibliotecas, resuelta contra la ubicacion del script y no contra
+    el directorio de trabajo: asi los generadores dan el mismo resultado se
+    llamen desde tools/, desde la raiz del repo o desde CI.
+    """
+    from pathlib import Path
+    return (Path(script_file).resolve().parent / LIB_DIR).resolve()
+
+
+# --------------------------------------------------------------------------
 # Cotas tomadas del plano "1.5 Antenna Dimension"
 # --------------------------------------------------------------------------
 

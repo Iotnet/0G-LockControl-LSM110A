@@ -44,16 +44,26 @@ Dónde estamos, con precisión:
 
 ## Contenido
 
-```
-libraries/
-  0G_Antenna.kicad_sym                      símbolo (2 pines: FEED, GND)
-  0G_Antenna.pretty/
-    ANT_IFA_915MHz_LSM110A.kicad_mod        la antena: cobre + keepout + documentación
-    ANT_LSM110A_BreakAwaySlots_EVM_ONLY     linea de troquelado del EVM - NO en el producto
-  0G_RF.pretty/
-    C_0402_1005Metric_0G.kicad_mod          land 0402 para L101 / C101 / C102
-    TP_Coax_50R_NanoVNA.kicad_mod           isla de 3 pads para pigtail coaxial
+**Las bibliotecas KiCad NO viven aquí.** Están donde vive el LSM110A, para que KiCad
+necesite un solo path registrado y todo salga bajo un único nickname:
 
+```
+../v0-replica-sji/kicad-lib/                nickname de footprints: 0G-LockControl
+  LSM110A.kicad_mod                         módulo LGA-34            (generado en F1)
+  LSM110A.kicad_sym                         símbolo, 34 pines        (generado en F1)
+  ANT_IFA_915MHz_LSM110A.kicad_mod          la antena: cobre + keepout + documentación
+  ANT_LSM110A_BreakAwaySlots_EVM_ONLY.kicad_mod  troquelado del EVM - NO en el producto
+  C_0402_1005Metric_0G.kicad_mod            land 0402 para L101 / C101 / C102
+  TP_Coax_50R_NanoVNA.kicad_mod             isla de 3 pads para pigtail coaxial
+  0G_Antenna.kicad_sym                      símbolo de la antena (2 pines: FEED, GND)
+```
+
+Los seis últimos los regenera `tools/build.sh`; los dos del LSM110A no se tocan.
+Detalle de instalación y pinout en [`../v0-replica-sji/kicad-lib/README.md`](../v0-replica-sji/kicad-lib/README.md).
+
+Lo que sí vive en esta carpeta:
+
+```
 antenna-test-board/                         placa de prueba y ajuste, 50 × 80 mm, DRC = 0
   antenna-test-board.kicad_pcb
   antenna-test-board.kicad_pro              netclases Default (0.15) y RF (1.00 / 0.15)
@@ -69,14 +79,25 @@ export/                                     renders + informe DRC (artefactos ge
 
 ### Añadir las bibliotecas a KiCad
 
-*Preferences → Manage Footprint Libraries* y *Manage Symbol Libraries*, o bien copiar las
-entradas de `antenna-test-board/fp-lib-table`:
+*Preferences → Manage Footprint Libraries* y *Manage Symbol Libraries*. **Dos entradas
+bastan para todo el proyecto** (LSM110A incluido):
 
-| Nickname | Ruta |
-|---|---|
-| `0G_Antenna` | `Hardware/KiCad/libraries/0G_Antenna.pretty` |
-| `0G_RF` | `Hardware/KiCad/libraries/0G_RF.pretty` |
-| `0G_Antenna` (símbolos) | `Hardware/KiCad/libraries/0G_Antenna.kicad_sym` |
+| Tipo | Nickname | Ruta |
+|---|---|---|
+| Footprints | `0G-LockControl` | `${KIPRJMOD}/../Hardware/v0-replica-sji/kicad-lib` |
+| Símbolos | `0G-LockControl` | `…/kicad-lib/LSM110A.kicad_sym` |
+| Símbolos | `0G-Antenna` | `…/kicad-lib/0G_Antenna.kicad_sym` |
+
+El nickname de footprints **tiene que ser `0G-LockControl`**: es el que llevan grabado los
+campos `Footprint` de los dos símbolos. Si usas otro, los enlaces hay que rehacerlos a mano.
+
+Los símbolos son dos archivos y por tanto dos nicknames — no se pueden unificar, y es mejor
+así: `LSM110A.kicad_sym` está en formato KiCad 9 y `0G_Antenna.kicad_sym` en formato KiCad 7
+(que KiCad 7/8/9 leen todos). Si abres el proyecto con KiCad 7, el símbolo del LSM110A no
+cargará; el de la antena sí.
+
+La `fp-lib-table` de `antenna-test-board/` ya trae la entrada de footprints resuelta con ruta
+relativa, así que la placa de prueba se abre sin configurar nada.
 
 ### Colocar la antena en una placa
 

@@ -6,7 +6,7 @@
     (property "Value" "ANT_IFA_915MHz_LSM110A" (at 1.905 7.112 0)
       (effects (font (size 1.27 1.27)))
     )
-    (property "Footprint" "0G_Antenna:ANT_IFA_915MHz_LSM110A" (at 0 0 0)
+    (property "Footprint" "0G-LockControl:ANT_IFA_915MHz_LSM110A" (at 0 0 0)
       (effects (font (size 1.27 1.27)) hide)
     )
     (property "Datasheet" "Hardware/KiCad/docs/geometria-antena.md" (at 0 0 0)

@@ -214,8 +214,10 @@ def add_gnd_zone(board, net, layer, rect, clearance):
 
 def build(outdir: Path) -> None:
     outdir.mkdir(parents=True, exist_ok=True)
-    libs = outdir.parent / "libraries"
-    ant_lib, rf_lib = libs / "0G_Antenna.pretty", libs / "0G_RF.pretty"
+    # Una sola carpeta de bibliotecas para todo (antena, RF y LSM110A), resuelta
+    # contra la ubicacion de este script y no contra el cwd.
+    lib = G.lib_dir(__file__)
+    ant_lib = rf_lib = lib
 
     board = pcbnew.BOARD()
     board.SetCopperLayerCount(2)
@@ -263,7 +265,7 @@ def build(outdir: Path) -> None:
     # ---- componentes -----------------------------------------------------
     ant = place(board, ant_lib, "ANT_IFA_915MHz_LSM110A", "ANT1",
                 "ANT_IFA_915MHz_LSM110A", ANT_ORG_X, ANT_ORG_Y,
-                nickname="0G_Antenna")
+                nickname=G.FP_LIB_NICKNAME)
     pad_of(ant, "1").SetNet(ant_feed)
     pad_of(ant, "2").SetNet(gnd)
 
@@ -271,7 +273,7 @@ def build(outdir: Path) -> None:
     # antena. Con +90 pcbnew intercambia los pads y la linea RF entra por el
     # pad equivocado (ver docs/verificacion.md).
     l101 = place(board, rf_lib, "C_0402_1005Metric_0G", "L101", "0R",
-                 FEED_X, L101_Y, rot_deg=-90.0, nickname="0G_RF")
+                 FEED_X, L101_Y, rot_deg=-90.0, nickname=G.FP_LIB_NICKNAME)
     pad_of(l101, "1").SetNet(ant_feed)
     pad_of(l101, "2").SetNet(rf_in)
 
@@ -279,12 +281,12 @@ def build(outdir: Path) -> None:
     # pad 2 es el interior (linea RF) y el pad 1 el exterior (plano de tierra);
     # de ahi el giro de 180 en C102.
     c101 = place(board, rf_lib, "C_0402_1005Metric_0G", "C101", "2.2pF",
-                 FEED_X - SHUNT_DX, C101_Y, nickname="0G_RF")
+                 FEED_X - SHUNT_DX, C101_Y, nickname=G.FP_LIB_NICKNAME)
     pad_of(c101, "1").SetNet(gnd)
     pad_of(c101, "2").SetNet(ant_feed)
 
     c102 = place(board, rf_lib, "C_0402_1005Metric_0G", "C102", "DNI",
-                 FEED_X + SHUNT_DX, C102_Y, rot_deg=180.0, nickname="0G_RF")
+                 FEED_X + SHUNT_DX, C102_Y, rot_deg=180.0, nickname=G.FP_LIB_NICKNAME)
     pad_of(c102, "1").SetNet(gnd)
     pad_of(c102, "2").SetNet(rf_in)
 
@@ -294,7 +296,7 @@ def build(outdir: Path) -> None:
     add_via(board, FEED_X + SHUNT_VIA_DX, C102_Y, gnd)
 
     coax = place(board, rf_lib, "TP_Coax_50R_NanoVNA", "J1", "50R", FEED_X, COAX_Y,
-                 nickname="0G_RF")
+                 nickname=G.FP_LIB_NICKNAME)
     pad_of(coax, "1").SetNet(gnd)
     pad_of(coax, "2").SetNet(rf_in)
     pad_of(coax, "3").SetNet(gnd)
@@ -571,10 +573,13 @@ def canonicalize(pcb: Path) -> tuple[int, int]:
     return len(blocks), len(mapping)
 
 
-FP_LIB_TABLE = """(fp_lib_table
+# Una sola entrada: la carpeta kicad-lib entera, que es donde viven el LSM110A,
+# la antena y los componentes RF. ${KIPRJMOD} es antenna-test-board/, asi que
+# ../.. es Hardware/. La ruta es relativa a proposito: el proyecto sigue
+# funcionando en cualquier clon del repo, sin variables de entorno.
+FP_LIB_TABLE = f"""(fp_lib_table
   (version 7)
-  (lib (name "0G_Antenna")(type "KiCad")(uri "${KIPRJMOD}/../libraries/0G_Antenna.pretty")(options "")(descr "Antenas PCB de 0G LockControl"))
-  (lib (name "0G_RF")(type "KiCad")(uri "${KIPRJMOD}/../libraries/0G_RF.pretty")(options "")(descr "Componentes de apoyo RF de 0G LockControl"))
+  (lib (name "{G.FP_LIB_NICKNAME}")(type "KiCad")(uri "${{KIPRJMOD}}/../../v0-replica-sji/kicad-lib")(options "")(descr "Bibliotecas de 0G LockControl: LSM110A, antena PCB y componentes RF"))
 )
 """
 

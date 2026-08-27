@@ -14,7 +14,9 @@ set -euo pipefail
 
 cd "$(dirname "$0")"
 
-LIB=../libraries
+# Casa unica de las bibliotecas KiCad: la misma carpeta que el LSM110A.
+# Tiene que coincidir con LIB_DIR de antenna_geometry.py.
+LIB=../../v0-replica-sji/kicad-lib
 BOARD=../antenna-test-board
 EXPORT=../export
 
@@ -23,7 +25,7 @@ python3 antenna_geometry.py
 
 echo
 echo "== 2/6  generando footprints ==================================="
-python3 gen_footprints.py "$LIB/0G_Antenna.pretty"
+python3 gen_footprints.py "$LIB"
 
 echo
 echo "== 3/6  generando simbolo ======================================"
@@ -35,7 +37,7 @@ python3 gen_test_board.py "$BOARD"
 
 echo
 echo "== 5/6  verificando footprints con el motor de KiCad ==========="
-python3 verify.py "$LIB/0G_Antenna.pretty"
+python3 verify.py "$LIB"
 
 echo
 echo "== 6/6  verificando la placa (DRC + cotas del cobre real) ======"

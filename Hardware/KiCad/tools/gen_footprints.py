@@ -2,11 +2,16 @@
 """
 Genera los footprints KiCad de la antena a partir de antenna_geometry.py.
 
-    python3 gen_footprints.py ../libraries/0G_Antenna.pretty
+    python3 gen_footprints.py [carpeta]
 
-Salida:
-    ANT_IFA_915MHz_LSM110A.kicad_mod        antena completa (cobre + keepout + doc)
+Sin argumento escribe en antenna_geometry.LIB_DIR, que es la carpeta donde vive
+el LSM110A: `Hardware/v0-replica-sji/kicad-lib/`.
+
+Salida (los cuatro en la MISMA carpeta, bajo el nickname 0G-LockControl):
+    ANT_IFA_915MHz_LSM110A.kicad_mod               antena completa (cobre + keepout + doc)
     ANT_LSM110A_BreakAwaySlots_EVM_ONLY.kicad_mod  troquelado del EVM (NO en el producto)
+    C_0402_1005Metric_0G.kicad_mod                 0402 de la red de matching
+    TP_Coax_50R_NanoVNA.kicad_mod                  punto de test coaxial 50 ohm
 
 Formato: KiCad 7 (version 20221018), compatible con KiCad 7/8/9.
 La sintaxis exacta se verifico contra la salida de pcbnew.IO_MGR (ver docs/verificacion.md).
@@ -330,16 +335,16 @@ def build_coax() -> str:
 
 
 def main() -> None:
-    ant_lib = Path(sys.argv[1] if len(sys.argv) > 1 else "../libraries/0G_Antenna.pretty")
-    rf_lib = ant_lib.parent / "0G_RF.pretty"
-    ant_lib.mkdir(parents=True, exist_ok=True)
-    rf_lib.mkdir(parents=True, exist_ok=True)
+    # Los cuatro footprints van a la MISMA carpeta, junto al LSM110A: un solo
+    # path registrado en KiCad y un solo nickname para todo el proyecto.
+    lib = Path(sys.argv[1]) if len(sys.argv) > 1 else G.lib_dir(__file__)
+    lib.mkdir(parents=True, exist_ok=True)
 
-    for lib, name, text in (
-        (ant_lib, FP_NAME, build_antenna()),
-        (ant_lib, SLOT_FP_NAME, build_slotrow()),
-        (rf_lib, CAP_NAME, build_cap0402()),
-        (rf_lib, COAX_NAME, build_coax()),
+    for name, text in (
+        (FP_NAME, build_antenna()),
+        (SLOT_FP_NAME, build_slotrow()),
+        (CAP_NAME, build_cap0402()),
+        (COAX_NAME, build_coax()),
     ):
         p = lib / f"{name}.kicad_mod"
         p.write_text(text, encoding="utf-8")

@@ -2,7 +2,15 @@
 """
 Genera la biblioteca de simbolos 0G_Antenna.kicad_sym.
 
-    python3 gen_symbol.py ../libraries/0G_Antenna.kicad_sym
+    python3 gen_symbol.py [archivo]
+
+Sin argumento escribe en antenna_geometry.LIB_DIR / SYM_LIB_FILE, o sea
+`Hardware/v0-replica-sji/kicad-lib/0G_Antenna.kicad_sym`: la misma carpeta que
+el LSM110A.
+
+El campo Footprint apunta a `0G-LockControl:ANT_IFA_915MHz_LSM110A`, que es el
+nickname con el que el README de kicad-lib registra esa carpeta. Si registras la
+carpeta con otro nickname, el enlace simbolo->footprint hay que rehacerlo a mano.
 
 El simbolo tiene DOS pines, y eso no es un capricho: una IFA esta unida a masa
 por su stub de cortocircuito, asi que en el esquematico hay que dibujar ese
@@ -18,7 +26,9 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-LIB = """(kicad_symbol_lib (version 20220914) (generator 0g_antenna_gen)
+import antenna_geometry as G
+
+LIB = f"""(kicad_symbol_lib (version 20220914) (generator 0g_antenna_gen)
   (symbol "ANT_IFA_915MHz_LSM110A" (pin_names (offset 0.762) hide) (in_bom no) (on_board yes)
     (property "Reference" "ANT" (at 1.905 8.89 0)
       (effects (font (size 1.27 1.27)))
@@ -26,7 +36,7 @@ LIB = """(kicad_symbol_lib (version 20220914) (generator 0g_antenna_gen)
     (property "Value" "ANT_IFA_915MHz_LSM110A" (at 1.905 7.112 0)
       (effects (font (size 1.27 1.27)))
     )
-    (property "Footprint" "0G_Antenna:ANT_IFA_915MHz_LSM110A" (at 0 0 0)
+    (property "Footprint" "{G.FP_LIB_NICKNAME}:ANT_IFA_915MHz_LSM110A" (at 0 0 0)
       (effects (font (size 1.27 1.27)) hide)
     )
     (property "Datasheet" "Hardware/KiCad/docs/geometria-antena.md" (at 0 0 0)
@@ -80,7 +90,8 @@ LIB = """(kicad_symbol_lib (version 20220914) (generator 0g_antenna_gen)
 
 
 def main() -> None:
-    out = Path(sys.argv[1] if len(sys.argv) > 1 else "../libraries/0G_Antenna.kicad_sym")
+    out = (Path(sys.argv[1]) if len(sys.argv) > 1
+           else G.lib_dir(__file__) / G.SYM_LIB_FILE)
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(LIB, encoding="utf-8")
     print(f"escrito: {out}  ({len(LIB)} bytes)")

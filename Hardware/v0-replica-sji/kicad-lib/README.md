@@ -1,27 +1,33 @@
-# Librería KiCad del LSM110A
+# Bibliotecas KiCad de 0G LockControl
 
-Generada en **F1** a partir de los datos verificados del datasheet. No es una conversión del
-JSON de EasyEDA: los números salen directos de las figuras del DS, y el footprint se
-**cotejó después** contra el de EasyEDA como comprobación cruzada.
+**Casa única de las bibliotecas del proyecto.** Todo lo que se coloca en una placa de
+0G LockControl sale de esta carpeta: el módulo, la antena y los componentes de RF. Un solo
+path registrado en KiCad, un solo nickname de footprints.
 
-| Archivo | Qué es | Fuente |
-|---|---|---|
-| `LSM110A.kicad_sym` | Símbolo de esquemático, 34 pines | DS R08 **Tabla 5-1-1**, págs. 14–15 |
-| `LSM110A.kicad_mod` | Footprint LGA-34 | DS R08 **Fig. 5-3-1** y **Fig. 5-2-1**, pág. 16 |
+## Contenido
+
+| Archivo | Qué es | Origen | Fuente |
+|---|---|---|---|
+| `LSM110A.kicad_sym` | Símbolo, 34 pines | F1, por script | DS R08 **Tabla 5-1-1**, págs. 14–15 |
+| `LSM110A.kicad_mod` | Footprint LGA-34 | F1, por script | DS R08 **Fig. 5-3-1** y **Fig. 5-2-1**, pág. 16 |
+| `0G_Antenna.kicad_sym` | Símbolo de la antena, 2 pines (FEED, GND) | **generado** | `antenna_geometry.py` |
+| `ANT_IFA_915MHz_LSM110A.kicad_mod` | La antena: cobre + keepout + documentación | **generado** | UM §1.5 + arte FCC pág. 5 |
+| `ANT_LSM110A_BreakAwaySlots_EVM_ONLY.kicad_mod` | Troquelado del EVM — **NO en el producto** | **generado** | UM §1.9 (medido, ±0.12 mm) |
+| `C_0402_1005Metric_0G.kicad_mod` | Land 0402 para L101 / C101 / C102 | **generado** | red de matching, `red-rf.md` |
+| `TP_Coax_50R_NanoVNA.kicad_mod` | Isla de 3 pads para pigtail coaxial | **generado** | medida en conducido |
+
+> **Los seis marcados «generado» NO se editan a mano.** Salen de
+> `../../KiCad/tools/build.sh`, que los reescribe desde `antenna_geometry.py` y después los
+> verifica con el motor de KiCad (**122 comprobaciones, DRC = 0**). Cualquier cambio manual
+> se pierde en el siguiente build. Para mover una cota, se corrige `antenna_geometry.py`.
+>
+> Los dos del LSM110A **no** los toca ese build: son de F1 y se quedan como están.
 
 ---
 
 ## Instalar en KiCad
 
-**Símbolo** — *Preferences → Manage Symbol Libraries → Project Specific Libraries → `+`*
-
-| Campo | Valor |
-|---|---|
-| Nickname | `0G-LockControl` |
-| Library Path | `${KIPRJMOD}/../Hardware/v0-replica-sji/kicad-lib/LSM110A.kicad_sym` |
-| Format | KiCad |
-
-**Footprint** — *Preferences → Manage Footprint Libraries → Project Specific → `+`*
+**Footprints** — *Preferences → Manage Footprint Libraries → Project Specific → `+`*
 
 | Campo | Valor |
 |---|---|
@@ -29,13 +35,50 @@ JSON de EasyEDA: los números salen directos de las figuras del DS, y el footpri
 | Library Path | `${KIPRJMOD}/../Hardware/v0-replica-sji/kicad-lib` |
 | Format | KiCad |
 
-> KiCad espera que las librerías de footprint sean una **carpeta `.pretty`**. Si te da
-> problemas, renombra la carpeta a `0G-LockControl.pretty` y apunta ahí. El `.kicad_mod`
-> también se puede importar suelto desde el editor de footprints
-> (*File → Import → Footprint*).
+Con esa **única** entrada aparecen los cinco footprints: `LSM110A`, `ANT_IFA_915MHz_LSM110A`,
+`ANT_LSM110A_BreakAwaySlots_EVM_ONLY`, `C_0402_1005Metric_0G` y `TP_Coax_50R_NanoVNA`.
 
-El campo `Footprint` del símbolo ya viene puesto a `0G-LockControl:LSM110A`, así que si usas
-ese nickname el enlace es automático.
+> **Sobre el `.pretty`:** una versión anterior de este README avisaba de que KiCad «espera»
+> una carpeta `.pretty` y sugería renombrar si daba problemas. **No hace falta, y está
+> comprobado:** el cargador de KiCad enumera esta carpeta plana sin más
+> (`IO_MGR.PluginFind(KICAD_SEXP).FootprintEnumerate()` devuelve los cinco). El sufijo
+> `.pretty` es una convención que el diálogo de *crear* biblioteca añade solo; para *leer* no
+> se exige. **No renombres la carpeta:** la `fp-lib-table` de la placa de prueba y los campos
+> `Footprint` de los símbolos apuntan a este nombre.
+
+**Símbolos** — *Manage Symbol Libraries → Project Specific Libraries → `+`*, **dos entradas**
+(son dos archivos, y no se pueden fusionar):
+
+| Nickname | Library Path |
+|---|---|
+| `0G-LockControl` | `${KIPRJMOD}/../Hardware/v0-replica-sji/kicad-lib/LSM110A.kicad_sym` |
+| `0G-Antenna` | `${KIPRJMOD}/../Hardware/v0-replica-sji/kicad-lib/0G_Antenna.kicad_sym` |
+
+El campo `Footprint` de los dos símbolos ya viene puesto (`0G-LockControl:LSM110A` y
+`0G-LockControl:ANT_IFA_915MHz_LSM110A`), así que **si usas ese nickname para los footprints
+el enlace es automático**. Si eliges otro nickname, hay que rehacer los enlaces a mano.
+
+### Nota de versión de KiCad
+
+Los archivos **no están todos en el mismo formato**, y conviene saberlo antes de abrir el
+proyecto. Probado con **KiCad 7.0.11**, no supuesto:
+
+| Archivo | Formato | ¿Carga en KiCad 7? |
+|---|---|---|
+| `0G_Antenna.kicad_sym` | KiCad 7 · `20220914` | ✅ sí |
+| Los 4 `.kicad_mod` generados | KiCad 7 · `20221018` | ✅ sí |
+| `LSM110A.kicad_mod` | KiCad 8 · `20240108` | ✅ **sí** — el formato de footprint es tolerante |
+| `LSM110A.kicad_sym` | KiCad 9 · `20241209` | ❌ **no** — `Unable to load library` |
+
+Los generados salen en formato **KiCad 7 a propósito**: es el que más versiones leen, y KiCad
+no convierte hacia atrás.
+
+**Consecuencia práctica:** con **KiCad 9 carga todo**. Con **KiCad 7 u 8** tendrás el módulo
+en el PCB pero **no en el esquemático** — su footprint carga y su símbolo no. Si trabajas en
+7/8 y necesitas el símbolo, hay que regenerarlo en formato antiguo: es trabajo pendiente, no
+un fallo de la biblioteca.
+
+Para saber en qué versión estás: *Help → About KiCad*.
 
 ---
 
@@ -148,7 +191,41 @@ pero es el único número no citado directamente de una figura.
 
 ## Reproducir estos archivos
 
-Ambos se generaron por script, con `assert` sobre los 34 pines, los tres vanos y el gap.
-El generador está en el historial de la sesión de F1. Para volver a validar el footprint
-sin KiCad, el script de comparación contra EasyEDA está en
-`../00-fuente-de-verdad/validacion-footprint.md` §«Reproducir estas medidas».
+**Los seis de la antena y RF** — un comando, y son byte a byte reproducibles (UUID
+deterministas y bloques ordenados, así que regenerar no ensucia el diff de git):
+
+```bash
+cd Hardware/KiCad/tools && ./build.sh
+```
+
+Regenera los footprints y el símbolo aquí, reconstruye la placa de prueba y corre las **122
+comprobaciones** (17 de la cadena de cotas + 63 de footprints + 42 de la placa, con DRC = 0).
+Sale con código ≠ 0 si algo falla, así que vale tal cual en CI. Método en
+`../../KiCad/docs/verificacion.md`.
+
+**Los dos del LSM110A** se generaron por script en F1, con `assert` sobre los 34 pines, los
+tres vanos y el gap; el generador está en el historial de la sesión de F1 y `build.sh` **no**
+los toca. Para volver a validar el footprint sin KiCad, el script de comparación contra
+EasyEDA está en `../00-fuente-de-verdad/validacion-footprint.md` §«Reproducir estas medidas».
+
+---
+
+## La antena
+
+Cotas, keepout, rendimiento medido de la referencia y el cotejo contra el arte de producción
+de SJI: [`../00-fuente-de-verdad/antena-cotas.md`](../00-fuente-de-verdad/antena-cotas.md).
+Geometría reconstruida y decisiones de diseño:
+[`../../KiCad/docs/geometria-antena.md`](../../KiCad/docs/geometria-antena.md).
+
+Dos cosas del footprint de la antena que sorprenden si no se avisa:
+
+1. **El origen es la esquina superior izquierda del cobre**, no el centro. Para colocarla en
+   una placa cuyo borde superior esté en `y_borde`:
+   `x = (ancho_placa − 39.50) / 2` (centrada), `y = y_borde + 4.00`.
+2. **Los pads 1 y 2 están unidos por cobre a propósito** — es el stub de cortocircuito de la
+   IFA. El footprint lo declara como `net_tie`, así que KiCad entiende que el corto es
+   intencional y el DRC no lo marca. **No lo «arregles».**
+
+Y una que no es del footprint pero anula la antena si se ignora: hace falta **keepout total
+en ambas capas** desde el borde de la placa hasta 20.03 mm — sin cobre, sin plano, sin vías,
+sin componentes. En una IFA el plano de tierra es parte del radiador.

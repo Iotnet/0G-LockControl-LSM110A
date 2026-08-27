@@ -5,7 +5,10 @@ Verificacion de los footprints generados, usando el motor real de KiCad (pcbnew)
 No comprueba "que el archivo exista": lo carga con el mismo parser que usa KiCad y
 mide la geometria resultante contra antenna_geometry.py.
 
-    python3 verify.py ../libraries/0G_Antenna.pretty
+    python3 verify.py [carpeta]
+
+Sin argumento verifica antenna_geometry.LIB_DIR, o sea
+`Hardware/v0-replica-sji/kicad-lib/`.
 
 Codigo de salida 0 si todo pasa, 1 si algo falla.
 """
@@ -191,7 +194,7 @@ def verify_slotrow(lib: Path) -> None:
 
 
 def main() -> None:
-    lib = Path(sys.argv[1] if len(sys.argv) > 1 else "../libraries/0G_Antenna.pretty").resolve()
+    lib = (Path(sys.argv[1]).resolve() if len(sys.argv) > 1 else G.lib_dir(__file__))
 
     print("=" * 78)
     print("Verificacion de geometria (antenna_geometry.py)")

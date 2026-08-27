@@ -1,5 +1,4 @@
 (fp_lib_table
   (version 7)
-  (lib (name "0G_Antenna")(type "KiCad")(uri "${KIPRJMOD}/../libraries/0G_Antenna.pretty")(options "")(descr "Antenas PCB de 0G LockControl"))
-  (lib (name "0G_RF")(type "KiCad")(uri "${KIPRJMOD}/../libraries/0G_RF.pretty")(options "")(descr "Componentes de apoyo RF de 0G LockControl"))
+  (lib (name "0G-LockControl")(type "KiCad")(uri "${KIPRJMOD}/../../v0-replica-sji/kicad-lib")(options "")(descr "Bibliotecas de 0G LockControl: LSM110A, antena PCB y componentes RF"))
 )
