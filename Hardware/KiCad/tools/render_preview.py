@@ -142,7 +142,7 @@ def build(path: Path) -> None:
     for _, r in G.SLOTS:
         s.rect(r, fill="#ffffff", stroke="#2f6b1f", **{"stroke-width": "0.35"})
 
-    # ---- fila de ranuras mecanicas opcional ------------------------------
+    # ---- fila de troquelado del EVM (solo referencia) --------------------
     for _, sx0, sx1 in G.SLOTROW_X:
         s.rrect(
             (sx0, G.SLOTROW_Y0, sx1, G.SLOTROW_Y1), G.SLOTROW_H / 2,
@@ -158,7 +158,8 @@ def build(path: Path) -> None:
                fill="#ffffff", stroke="none")
     s.rect((G.FEED_X0 - 0.15, G.C101_PAD_Y, G.FEED_X1 + 0.15, G.C101_PAD_Y + 1.0),
            fill="#475569")
-    s.text(G.FEED_X1 + 1.6, G.C101_PAD_Y + 0.8, "C101 (serie)", size=2.4, anchor="start")
+    s.text(G.FEED_X1 + 1.6, G.C101_PAD_Y + 0.8, "L101 serie + C101 shunt", size=2.4,
+           anchor="start")
 
     # ---- etiquetas -------------------------------------------------------
     s.text(G.ANT_W / 2, -1.4, "ANTENA - cobre capa TOP (un solo poligono, IFA)",

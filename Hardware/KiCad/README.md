@@ -152,7 +152,7 @@ referencia es la única forma de que el S11 sea comparable.
 
 Lleva la antena colocada según el plano, plano de tierra en las dos capas, línea CPWG
 50 Ω, la **red de matching en π** de la referencia SJI (`L101` serie + `C101`/`C102`
-shunt, tal como aparece en la figura «EVM LSM») y una isla de 3 pads (**J1**) para soldar
+shunt, tal como la da el esquemático oficial § 1.3) y una isla de 3 pads (**J1**) para soldar
 un pigtail coaxial y medir con NanoVNA — J1 cumple la función del `CON101` del EVM.
 
 El procedimiento de ajuste está en
@@ -161,9 +161,10 @@ El procedimiento de ajuste está en
 ## Documentación
 
 - [`docs/geometria-antena.md`](docs/geometria-antena.md) — todas las cotas, cómo se
-  derivan del plano, el **cotejo contra la figura «EVM LSM»** de SJI, y las tres
-  discrepancias encontradas: una resuelta (la red de matching), una corroborada (la fila
-  de ranuras) y una asumida (los 0.02 mm del stub).
+  derivan del plano, la **verificación píxel a píxel contra el plano oficial**, el
+  **S11 medido** de la § 1.6, y las tres discrepancias del plano: las tres resueltas
+  contra el manual (el rótulo de 4.05, la nota que ponía C101 en serie, y las ranuras
+  que resultaron ser una línea de troquelado).
 - [`docs/verificacion.md`](docs/verificacion.md) — qué se comprueba y cómo, los
   **9 errores** que encontró el proceso, y qué **no** cubre.
 
