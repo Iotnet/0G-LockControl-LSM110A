@@ -201,6 +201,7 @@ La transición al **LSM110A** permite pasar de una placa de desarrollo a un SoC 
 - 📕 **[Especificación de producto v1.0 (PDF)](./docs/References/spec-producto-lsm110a-v1.pdf)
 - 📄 [Especificación de producto v1.0 (Markdown)](./docs/spec-producto.md)
 - 📄 [Decisiones técnicas (ADRs)](./docs/decisiones-tecnicas.md)
+- 📄 [Selección de acelerómetro — comparativa y abastecimiento](./docs/seleccion-acelerometro.md)
 - 📄 [Pinout de los 34 pines (fuente de verdad, DS R08 Tabla 5-1-1)](./Hardware/v0-replica-sji/00-fuente-de-verdad/pinout-34-pines.md)
 - 📄 [Asignación de pines en v0](./docs/pinout-lsm110a.md)
 - 📄 [Estado de la réplica v0 del diseño SJI](./Hardware/v0-replica-sji/ESTADO.md)

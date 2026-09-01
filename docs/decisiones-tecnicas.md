@@ -170,3 +170,38 @@ Registro de decisiones arquitectónicas del proyecto. Cada entrada documenta el 
   cambios en F3** (valor y tecnología del condensador de soporte, y el posible pivot a
   CR2477). Por eso F3 debe dejar ese footprint dimensionado con holgura y **no cerrar la BOM
   de alimentación** hasta tener GATE 2.
+
+## DT-017: Acelerómetro — se confirma LIS2DW12; segunda fuente y plan de compra
+- **Fecha:** 2026-09-01
+- **Contexto:** el LIS2DW12 se eligió al inicio del proyecto sin una comparativa documentada.
+  Antes de cerrar la BOM conviene verificar que sigue siendo la parte correcta, y resolver
+  dónde se compra: **ni UNIT Electronics ni AG Electrónica venden MEMS sub-µA en LGA-12** —su
+  catálogo de movimiento son breakouts (ADXL345 GY-291, ADXL335 GY-61, MPU6050, BMI160/270,
+  MPU-9250, BNO085), todos por encima del presupuesto de energía.
+- **Filtro aplicado:** ≤1 µA con detección activa (presupuesto de sleep de 5 µA, DT-013) ·
+  1.7–3.6 V funcionando a 2.0 V (CR2450 directa, DT-003) · I²C (PA9/PA10 son los únicos pines
+  cableados) · INT por umbral hacia PA0/EXTI0 · motion engine que reporte eje dominante
+  (bytes 2–4 del payload) · ≤2×2 mm y <1 USD @1k.
+- **Decisión:**
+  1. **Producción: se mantiene `U2 = LIS2DW12TR`** (LCSC C189624). Es el único candidato que
+     cumple los seis requisitos a la vez, y ya está integrado en esquemático, BOM, pinout y
+     driver validado (Y1–Y3).
+  2. **Segunda fuente pin-compatible: `LIS2DTW12`**, que además trae termómetro absoluto
+     ±0.8 °C typ —relevante porque el byte 7 del payload es temperatura y hoy se lee del
+     sensor interno del LIS2DW12, que es de compensación de offset, no de medición absoluta.
+     Se conserva `LIS2DH12` como respaldo barato por quiebre de stock.
+  3. **Alternativa para v1 (no drop-in): `BMA400`** de Bosch — 800 nA, auto-wakeup por
+     hardware, orientado a cerraduras y sensores de puerta. **Pinout distinto → exige respin.**
+  4. **Descartado `ADXL362`** pese a ser el de menor consumo (270 nA): es **solo SPI**, obliga
+     a re-rutear y a tirar el driver. Queda como contingencia si el GATE 2 no cierra.
+  5. **Compra:** el chip va por LCSC (integra con el ensamble JLCPCB) o, en canal nacional con
+     factura, DigiKey México / Mouser / Arrow es-mx. **Para banco se compra en UNIT el
+     ADXL345 GY-291 (~$70 MXN)** para no bloquear Y4 esperando importación: valida la cadena
+     I²C+EXTI, **no** el consumo. El consumo se mide con `STEVAL-MKI179V1` o con LIS2DW12TR
+     sueltos en breakout propio.
+- **Consecuencia:** cero impacto en esquemático, layout, BOM (fila U2) y firmware. Solo se
+  añade `LIS2DTW12` a la columna de sustitutos y una compra menor de banco.
+- **Pendientes:** confirmar VDD/pinout del BMA400; verificar `WHO_AM_I` y registros de
+  temperatura del LIS2DTW12; fijar el consumo exacto del LIS2DW12 a 12.5 Hz en LP mode 1 con
+  el margen que exige DT-013 (el fabricante no publica `max`).
+- **Análisis completo:** [`seleccion-acelerometro.md`](./seleccion-acelerometro.md)
