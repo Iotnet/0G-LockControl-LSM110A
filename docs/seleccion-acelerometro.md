@@ -63,7 +63,48 @@ La conclusión no es matizada: **un IMU de 6/9 ejes convierte el producto en des
 semana.** El giroscopio no aporta nada aquí —detectar que una puerta se movió no necesita
 velocidad angular— y es exactamente lo que se come la pila.
 
-### 3.3 Por qué se descarta el ADXL362 pese a ser el de menor consumo
+### 3.3 Presupuesto de área — el acelerómetro no es el que gasta espacio
+
+El objetivo de v0 es una tarjeta de **~35×45 mm ≈ 1575 mm²**
+([`sistema-minimo-prototipo-v0.md`](./sistema-minimo-prototipo-v0.md) §1). Repartida:
+
+| Bloque | Área en PCB | % de 1575 mm² |
+|---|---|---|
+| **Keepout de antena** (50.00 × 20.03 mm, arte de producción SJI) | **1002 mm²** | **64 %** |
+| Holder CR2450 (celda ⌀24.5 mm) | ≈ 470 mm² + pestañas | ~30 % |
+| Módulo LSM110A (14.00 × 15.00 mm, verificado contra DS R08 Fig. 5-2-1) | 210 mm² | 13 % |
+| C_TX tántalo 470 µF CASE-D (7.3 × 4.3 × **2.9 mm de alto**) | 31 mm² | 2 % |
+| DRV5032 SOT-23 | 4.6 mm² | 0.3 % |
+| **LIS2DW12 LGA-12 (2.0 × 2.0 × 0.7 mm)** | **4 mm²** | **0.25 %** |
+
+El acelerómetro es el componente activo más pequeño de la tarjeta. **El condensador de bulk
+solo, es 8× más grande que él; el keepout de la antena es 250× más grande.** Sumando sus dos
+100 nF de desacoplo y los dos pull-ups de I²C, el bloque completo de detección de movimiento
+no pasa de **~7 mm², el 0.4 % de la tarjeta**. Quitarlo entero no haría el producto más chico
+de forma perceptible.
+
+Bajar de LGA-12 2×2 tampoco paga: los encapsulados más pequeños del mercado (WLCSP de
+~1.1×1.1 mm) ahorran ~3 mm² —el 0.2 % de la tarjeta— a cambio de romper el DRC de 2 capas de
+JLCPCB que fija [`especificaciones-diseno-pcb.md`](./especificaciones-diseno-pcb.md)
+(track/space ≥ 0.127 mm) y de arriesgar rendimiento de ensamble.
+
+**Las palancas reales de tamaño, en orden:**
+
+1. **La antena (64 %).** Congelada por DT-010: cambiarla invalida la FCC heredada y obliga a
+   re-certificar. Es la decisión grande, y no tiene nada que ver con el sensor.
+2. **La CR2450 y su holder (~30 %).** Bajar a CR2032 recorta área pero pasa de 620 a ~220 mAh
+   y empeora la caída en el pulso de TX. Lo decide el GATE 2.
+3. **El C_TX de 470 µF (31 mm² y 2.9 mm de alto).** El único de la lista que está genuinamente
+   abierto a revisión: un polímero low-ESR o un banco de MLCC puede ser más chico. También
+   GATE 2.
+
+> ⚠️ **Tensión documental abierta (no la resuelve este documento).** El objetivo de ~35×45 mm
+> de `sistema-minimo-prototipo-v0.md` §1 **no cabe** con la antena de referencia: el ancho de
+> 50 mm está *medido* contra el arte de producción de SJI y `especificaciones-diseno-pcb.md`
+> lo da como forzado, no como estimación. Los dos documentos hay que reconciliarlos en F5. Es
+> el problema de tamaño real del proyecto.
+
+### 3.4 Por qué se descarta el ADXL362 pese a ser el de menor consumo
 
 270 nA en modo wake-up es mejor que cualquier ST de la tabla. Se descarta igual porque **es
 solo SPI**: obligaría a re-rutear PA9/PA10, gastar dos GPIO adicionales (CS y SCK/MISO/MOSI),
@@ -117,7 +158,7 @@ es plan B para una revisión futura (v1), no un swap de BOM.
 
 ### 4.4 Descartados
 
-ADXL362 (§3.3) · ADXL345, ADXL335 y todos los IMU 6/9 DoF (§3.2) · todo el catálogo actual de
+ADXL362 (§3.4) · ADXL345, ADXL335 y todos los IMU 6/9 DoF (§3.2) · todo el catálogo actual de
 UNIT y AG para **producción**.
 
 ## 5. Abastecimiento — dónde se compra cada cosa
@@ -148,6 +189,11 @@ Lo que **sí** tienen, y qué es cada cosa:
 | ST eStore | [LIS2DW12TR](https://estore.st.com/en/lis2dw12tr-cpn.html) | Cantidades chicas directo de fábrica |
 
 **(b) Pieza de banco — para cerrar Y4 (M2) y M4 en la NUCLEO-WL55JC, ahora**
+
+> **Ningún breakout de UNIT o AG va montado en la PCB del producto.** Se conecta por cables a
+> la NUCLEO-WL55JC —que ya es una placa de 70×82 mm— y se usa para depurar firmware. El
+> producto final no hereda ni un mm² ni un µA de esa pieza: en la PCB va el LIS2DW12 desnudo
+> de 2×2 mm (§3.3). Es material de banco, no de BOM.
 
 1. **En UNIT, hoy: ADXL345 GY-291 (~$70 MXN).** Valida *exactamente* la arquitectura que
    importa: I²C + INT push-pull hacia un pin EXTI, umbral en mg, activity/inactivity,
