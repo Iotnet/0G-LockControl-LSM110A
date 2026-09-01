@@ -214,6 +214,43 @@ def verify_dimensions(lib: Path) -> None:
           "sin cotas por debajo del plano (la 5.60 va en la placa, no aqui)",
           f"{len(huerfanas)} testigo(s) en y = {huerfanas}")
 
+    # ---- la cota tiene que LLEGAR al cobre que mide ----------------------
+    # Este es el defecto que se colo dos veces: la cota estaba en su sitio y
+    # medía lo correcto, pero flotaba a 1.7 mm del cobre sin linea de extension
+    # que las uniera, asi que no se veia que estaba midiendo. Que una cota este
+    # bien situada no basta: tiene que verse de donde sale.
+    poly = next(p for p in fp.Pads() if p.GetNumber() == "1").GetEffectivePolygon()
+
+    def hay_cobre(x, y, hacia, alcance=0.30):
+        paso = 0.01
+        n = int(alcance / paso)
+        return any(poly.Contains(pcbnew.VECTOR2I(int((x + hacia * k * paso) * MM),
+                                                 int(y * MM))) for k in range(n + 1))
+
+    # Se leen los extremos REALES de la linea de extension del fichero. Una
+    # version anterior de esta comprobacion los daba por supuestos con una
+    # constante, y por eso no detectaba nada: comprobaba su propia suposicion.
+    cu = next(p for p in fp.Pads() if p.GetNumber() == "1").GetBoundingBox()
+    cx = cu.Centre().x / MM
+    horiz = [(g.GetStart().x / MM, g.GetEnd().x / MM, g.GetStart().y / MM)
+             for g in marks]
+
+    # dy: a que lado del canto esta el cobre (13.00 es borde inferior del brazo
+    # -> el cobre queda arriba; 11.98 es borde superior del tramo del stub ->
+    # el cobre queda abajo)
+    for label, y, dy in (("3.03", G.Y_BOT, -0.01), ("4.05", G.STUB_TOP_Y, +0.01)):
+        tramos = [(a, b) for a, b, yy in horiz if abs(yy - y) < 0.002]
+        if not check(tramos, f"{label}: hay linea de extension en y = {y}"):
+            continue
+        # extremo interior = el mas cercano al cobre; se prueba hacia el cobre
+        a, b = tramos[0]
+        x_in = min((a, b), key=lambda v: abs(v - cx))
+        hacia = 1.0 if cx > x_in else -1.0
+        check(hay_cobre(x_in, y + dy, hacia),
+              f"{label}: la linea de extension LLEGA al cobre que mide",
+              f"extremo interior en x = {x_in:.2f}; cobre a "
+              f"{'<=' if hay_cobre(x_in, y + dy, hacia) else '>'}0.30 mm")
+
 
 def verify_slotrow(lib: Path) -> None:
     name = "ANT_LSM110A_BreakAwaySlots_EVM_ONLY"

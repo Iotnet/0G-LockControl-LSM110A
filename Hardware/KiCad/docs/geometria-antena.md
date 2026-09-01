@@ -121,12 +121,24 @@ están repartidas entre el footprint y la placa.
 | **3.03** | fondo del cobre, y = 13.00 | borde del plano, y = 16.03 | x = −2.30, a la izquierda |
 | **4.05** | techo del tramo del stub, y = 11.98 | borde del plano, y = 16.03 | x = 41.20, a la derecha |
 
-Son marcas testigo en los dos extremos más el tramo entre ellas, dibujadas con líneas: **un
-`.kicad_mod` no admite objetos de cota de KiCad**, esos son de placa. Se miden con la regla.
+Están dibujadas con líneas, porque **un `.kicad_mod` no admite objetos de cota de KiCad** —
+esos son de placa. Llevan **líneas de extensión** que salen del canto de cobre medido y
+llegan hasta pasada la línea de cota, más puntas de flecha, igual que las dibuja el plano de
+SJI. Se miden con la regla.
 
-`verify.py` comprueba que las marcas caen exactamente sobre la geometría que dicen medir
-(13.00, 11.98, 16.03), y **que no haya ninguna cota por debajo del plano** — donde el
-footprint no tiene cobre. Una anotación no puede quedarse desfasada sin que el build falle.
+> **Una versión anterior no tenía líneas de extensión:** solo una marca de 0.8 mm flotando a
+> 1.7 mm del cobre, con un hueco en medio. La cota estaba en su sitio y medía lo correcto,
+> pero **no se veía de dónde salía**, que para quien abre el footprint es lo mismo que estar
+> mal. Que una cota esté bien situada no basta: tiene que verse qué mide.
+
+`verify.py` comprueba tres cosas, y las tres nacen de errores que se colaron:
+
+1. Que las marcas caen **exactamente** sobre la geometría que dicen medir (13.00, 11.98, 16.03).
+2. Que **la línea de extensión llega al cobre** — lee sus extremos reales del fichero y busca
+   cobre a ≤ 0.30 mm del extremo interior. La primera versión de esta comprobación usaba una
+   constante en vez de leer el fichero, así que comprobaba su propia suposición y no detectaba
+   nada; se rehízo y se probó introduciendo el defecto a mano para verla fallar.
+3. Que **no haya ninguna cota por debajo del plano**, donde el footprint no tiene cobre.
 
 ### En la placa de prueba (`User.Drawings`) — la que mide hasta un componente
 

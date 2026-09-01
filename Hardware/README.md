@@ -25,7 +25,7 @@ Diseño en KiCad de la [antena IFA ranurada integrada en PCB](KiCad/README.md)
 (`ANT_IFA_915MHz_LSM110A`), reconstruida del plano «1.5 Antenna Dimension»: generadores
 paramétricos, placa de prueba para ajuste con NanoVNA, y la documentación de geometría y
 verificación. Todo se regenera y verifica con `KiCad/tools/build.sh`
-(138 comprobaciones, DRC = 0).
+(142 comprobaciones, DRC = 0).
 **Ojo:** es un redibujo, no el Gerber oficial de SJI — ver el aviso de certificación del
 README.
 

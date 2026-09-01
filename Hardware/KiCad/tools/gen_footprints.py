@@ -172,23 +172,40 @@ def build_antenna() -> str:
     # OJO al medir en KiCad: la regla se engancha a la rejilla. Con rejilla de
     # 0.5 o 1 mm, 3.03 se lee como 3.000 y 4.05 como 4.000. Hay que poner la
     # rejilla en 0.01 mm, o mantener pulsada Ctrl para desactivar el enganche.
-    def dim_v(key, x, y0, y1, label, tick=0.8, lx=None, side=-1):
-        """Cota vertical: marcas testigo en y0 e y1, tramo entre ellas y texto."""
-        out = [fp_line(tag, f"{key}_t0", x - tick / 2, y0, x + tick / 2, y0,
-                       "Cmts.User", 0.05),
-               fp_line(tag, f"{key}_t1", x - tick / 2, y1, x + tick / 2, y1,
-                       "Cmts.User", 0.05),
-               fp_line(tag, f"{key}_ln", x, y0, x, y1, "Cmts.User", 0.05)]
-        out.append(fp_text(tag, "user", label,
-                           lx if lx is not None else x + side * 1.6,
-                           (y0 + y1) / 2.0, "Cmts.User", 0.5, 0.08))
+    def dim_v(key, x, y0, y1, label, from_x, lx):
+        """
+        Cota vertical con LINEAS DE EXTENSION, como las dibuja el plano de SJI:
+        salen del canto de cobre que se mide y llegan hasta pasada la linea de
+        cota. Sin ellas la cota queda flotando en el vacio y no se ve que mide
+        -- que es justo lo que le pasaba a la primera version.
+
+            from_x  x del canto de cobre del que sale la cota
+            x       x de la linea de cota
+        """
+        s = 1.0 if x > from_x else -1.0
+        gap = 0.15 * s      # hueco entre el cobre y el arranque de la extension
+        over = 0.40 * s     # la extension sobrepasa la linea de cota
+        w, arr = 0.05, 0.45  # grosor y largo de las puntas de flecha
+        out = []
+        for n, y in (("e0", y0), ("e1", y1)):
+            out.append(fp_line(tag, f"{key}_{n}", from_x + gap, y, x + over, y,
+                               "Cmts.User", w))
+        out.append(fp_line(tag, f"{key}_ln", x, y0, x, y1, "Cmts.User", w))
+        # puntas de flecha: dos trazos oblicuos hacia dentro en cada extremo
+        for n, y, d in (("a0", y0, +1.0), ("a1", y1, -1.0)):
+            for k, dx in ((0, -0.20), (1, +0.20)):
+                out.append(fp_line(tag, f"{key}_{n}{k}", x, y, x + dx, y + d * arr,
+                                   "Cmts.User", w))
+        out.append(fp_text(tag, "user", label, lx, (y0 + y1) / 2.0,
+                           "Cmts.User", 0.5, 0.08))
         return out
 
     # Solo se acotan cantos que EXISTEN en este footprint.
-    # 3.03: fondo del cobre -> borde del plano de tierra.
-    L += dim_v("dim303", -2.30, G.Y_BOT, G.Y_GND, "3.03", lx=-3.85)
-    # 4.05: techo del tramo horizontal del stub -> borde del plano.
-    L += dim_v("dim405", 41.20, G.STUB_TOP_Y, G.Y_GND, "4.05", lx=42.75)
+    # 3.03: fondo del cobre -> borde del plano. Sale del canto izquierdo (x=0).
+    L += dim_v("dim303", -2.30, G.Y_BOT, G.Y_GND, "3.03", from_x=0.0, lx=-3.30)
+    # 4.05: techo del tramo del stub -> borde del plano. Sale del canto derecho.
+    L += dim_v("dim405", 41.60, G.STUB_TOP_Y, G.Y_GND, "4.05",
+               from_x=G.ANT_W, lx=42.60)
     #
     # La cota 5.60 del plano NO se dibuja aqui, a proposito. Va del borde del
     # plano al pad de C101/L101, y ese condensador es un componente de PLACA:
@@ -201,10 +218,10 @@ def build_antenna() -> str:
     # nada del footprint cuelga por debajo del cobre.
     L.append(fp_text(tag, "user", "FEED 1.00 -> CPWG 1.00 / 0.15",
                      G.FEED_CENTER_X - 12.0, G.Y_GND - 1.20, "Cmts.User", 0.6, 0.1))
+    # Corto y fuera de la linea de cota de 4.05, que pasa por x = 41.60.
     L.append(fp_text(tag, "user",
-                     f"stub L a GND: tramo {G.STUB_RUN:.2f} x {G.STUB_RUN_H:.2f}, "
-                     f"pata {G.STUB_W:.2f}",
-                     G.STUB_X1 + 0.6, G.STUB_TOP_Y + 0.5, "Cmts.User", 0.6, 0.1))
+                     f"stub {G.STUB_RUN:.2f} x {G.STUB_RUN_H:.2f}",
+                     36.0, G.Y_GND - 1.20, "Cmts.User", 0.5, 0.08))
 
     # ---- pad 1: TODO el cobre de la antena ---------------------------------
     # El ancla del pad se prolonga 1.50 mm por debajo del borde del plano para
