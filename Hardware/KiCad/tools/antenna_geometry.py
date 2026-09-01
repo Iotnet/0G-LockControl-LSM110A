@@ -109,13 +109,29 @@ FEED_X1 = FEED_CENTER_X + FEED_W / 2.0  # 34.50
 ARM_BOT_X1 = FEED_X1  # 34.50
 
 # Stub en L: sale del borde inferior del brazo inferior, corre 5.00 a la derecha
-# y baja hasta el plano de tierra. Bounding box = STUB_RUN x (Y_GND - STUB_TOP_Y).
-STUB_TOP_Y = Y_BOT - STUB_W  # 12.00  el tramo horizontal es el ultimo 1.00 del brazo inferior
+# y baja hasta el plano de tierra.
+#
+# El techo del tramo horizontal lo fija la cota 4.05 del plano, NO una suposicion.
+# Las dos cotas verticales de esa zona comparten su flecha inferior (el borde del
+# plano de tierra), asi que restarlas da el alto del tramo horizontal:
+#
+#       4.05  (techo del tramo horizontal -> borde del plano)
+#     - 3.03  (fondo del cobre de la antena -> borde del plano)
+#     = 1.02   alto del tramo horizontal
+#
+# Ese 1.02 NO esta acotado en el plano: es la unica cota de la cadena que el
+# dibujo deja libre, y por eso es la que absorbe la diferencia. Una version
+# anterior suponia que el tramo medida 1.00 (igual que el ancho de la pata), lo
+# que daba 4.03 y obligaba a comprobar la cota 4.05 con tolerancia 0.03. Ahora
+# la cota manda y la comprobacion es exacta.
+STUB_V_EXT = 4.05  # cota del plano: techo del tramo horizontal -> borde del plano
+STUB_TOP_Y = Y_GND - STUB_V_EXT  # 11.98
+STUB_RUN_H = Y_BOT - STUB_TOP_Y  # 1.02  derivado de 4.05 - 3.03 (no acotado)
 STUB_X0 = ARM_BOT_X1  # 34.50
 STUB_X1 = STUB_X0 + STUB_RUN  # 39.50 (coincide con el borde derecho de la antena)
 STUB_LEG_X0 = STUB_X1 - STUB_W  # 38.50
 STUB_LEG_X1 = STUB_X1  # 39.50
-STUB_BBOX_H = Y_GND - STUB_TOP_Y  # 4.03  (el plano rotula 4.05; ver docs)
+STUB_BBOX_H = STUB_V_EXT  # 4.05  alto del bounding box del stub en L
 
 # Borde derecho de la antena: solo tiene cobre desde y=0 hasta el fin del brazo
 # central -> esa es la cota 10.50 del plano.
@@ -330,11 +346,14 @@ def check() -> list[str]:
     ok("antena centrada: margen lateral", SIDE_MARGIN, 5.25)
     ok("stub en L: tramo horizontal = 5.00", STUB_X1 - STUB_X0, 5.00)
     ok("stub en L: borde derecho coincide con el de la antena", STUB_X1, ANT_W)
-    ok("stub en L: alto de bounding box ~= 4.05", STUB_BBOX_H, 4.05, tol=0.03)
+    # Exacta, no con tolerancia: la cota 4.05 del plano manda sobre la geometria.
+    ok("stub en L: extension vertical = cota 4.05 del plano", Y_GND - STUB_TOP_Y, 4.05)
+    ok("stub en L: alto del tramo horizontal = 4.05 - 3.03", STUB_RUN_H, 1.02)
+    ok("stub en L: ancho de la pata = 1.00", STUB_LEG_X1 - STUB_LEG_X0, 1.00)
     ok("feed centrado en el fin de la ranura 1", FEED_CENTER_X, 34.00)
     ok("feed y stub contiguos (topologia IFA)", STUB_X0 - FEED_X1, 0.0)
     ok("pata del stub llega al plano de tierra", Y_GND, EDGE_TO_GND - EDGE_TO_ANT_TOP)
-    ok("area de cobre", copper_area(), 480.81, tol=1e-3)
+    ok("area de cobre", copper_area(), 480.91, tol=1e-3)
     ok("area del contorno == suma de rectangulos", outline_area(), copper_area(), tol=1e-6)
     out.append(
         f"[{'OK ' if outline_is_rectilinear() else 'FALLA'}] "

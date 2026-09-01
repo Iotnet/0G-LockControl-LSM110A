@@ -126,6 +126,22 @@ def verify_antenna(lib: Path) -> None:
     for label, x, y in probes_out:
         check(not inside(x, y), f"SIN cobre en ({x}, {y}) - {label}")
 
+    # ---- canto superior del tramo horizontal del stub --------------------
+    # Es LA cota que estaba mal (se suponia 1.00 de alto -> 4.03; el plano dice
+    # 4.05 -> 1.02). Las sondas de arriba no la encierran, asi que se BUSCA el
+    # canto barriendo en y, en una x donde el unico cobre posible es el stub
+    # (a la derecha del brazo inferior, que acaba en 34.50).
+    x_stub = 37.0
+    y, step = 11.00, 0.001
+    while y < 13.00 and not inside(x_stub, y):
+        y += step
+    close(y, G.STUB_TOP_Y,
+          f"canto superior del tramo del stub medido en x={x_stub}", tol=0.0015)
+    close(G.Y_GND - y, 4.05,
+          "extension vertical del stub = cota 4.05 del plano", tol=0.0015)
+    close(G.Y_BOT - y, 1.02,
+          "alto del tramo horizontal del stub = 4.05 - 3.03", tol=0.0015)
+
     # ---- conectividad de la forma de "2" --------------------------------
     # Un solo poligono relleno, sin huecos: eso prueba que los dos puentes unen
     # los tres brazos y que ninguna ranura corta la pieza en dos.
@@ -163,6 +179,35 @@ def verify_antenna(lib: Path) -> None:
     a = fp.GetAttributes()
     check(bool(a & pcbnew.FP_EXCLUDE_FROM_BOM), "excluido del BOM (es cobre, no un componente)")
     check(bool(a & pcbnew.FP_EXCLUDE_FROM_POS_FILES), "excluido del fichero de posiciones")
+
+
+def verify_dimensions(lib: Path) -> None:
+    """
+    Las cotas dibujadas en Cmts.User tienen que caer sobre la geometria que
+    dicen medir. Si alguien mueve una cota del plano y se olvida del dibujo, la
+    anotacion mentiria -- y una anotacion que miente es peor que no tenerla.
+    """
+    io = pcbnew.IO_MGR.PluginFind(pcbnew.IO_MGR.KICAD_SEXP)
+    fp = io.FootprintLoad(str(lib), "ANT_IFA_915MHz_LSM110A")
+    if fp is None:
+        return
+
+    marks = [g for g in fp.GraphicalItems()
+             if g.GetLayer() == pcbnew.Cmts_User and g.GetClass() == "MGRAPHIC"
+             and abs(g.GetStart().y - g.GetEnd().y) < 1000]  # testigos horizontales
+    ys = sorted({round(g.GetStart().y / MM, 3) for g in marks})
+
+    for want, label in ((G.Y_BOT, "3.03: testigo en el fondo del cobre (13.00)"),
+                        (G.STUB_TOP_Y, "4.05: testigo en el techo del stub (11.98)"),
+                        (G.Y_GND, "3.03 y 4.05: testigo en el borde del plano (16.03)"),
+                        (G.C101_PAD_Y, "5.60: testigo en el pad de C101 (21.63)")):
+        hit = min(ys, key=lambda v: abs(v - want)) if ys else float("nan")
+        check(abs(hit - want) <= 0.002, label, f"testigo mas cercano en y = {hit}")
+
+    # y los tres valores rotulados tienen que salir de la geometria, no del texto
+    close(G.Y_GND - G.Y_BOT, 3.03, "cota rotulada 3.03 = Y_GND - Y_BOT")
+    close(G.Y_GND - G.STUB_TOP_Y, 4.05, "cota rotulada 4.05 = Y_GND - STUB_TOP_Y")
+    close(G.C101_PAD_Y - G.Y_GND, 5.60, "cota rotulada 5.60 = C101_PAD_Y - Y_GND")
 
 
 def verify_slotrow(lib: Path) -> None:
@@ -210,6 +255,8 @@ def main() -> None:
     print(f"biblioteca: {lib}")
     print("=" * 78)
     verify_antenna(lib)
+    print()
+    verify_dimensions(lib)
     print()
     verify_slotrow(lib)
 

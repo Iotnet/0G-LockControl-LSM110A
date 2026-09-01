@@ -84,9 +84,10 @@ La cota **7.50** del plano corresponde a *brazo central + ranura 2 + brazo infer
 |---|---|---|
 | alto del borde derecho (x = 39.50) | 10.50 | brazo superior + ranura 1 + brazo central ✔ |
 | stub en L, tramo horizontal | 5.00 | x ∈ [34.50, 39.50] |
-| stub en L, ancho | 1.00 | y ∈ [12.00, 13.00] en el tramo horizontal |
+| stub en L, **alto del tramo** | **1.02** | y ∈ [11.98, 13.00] — **derivado de 4.05 − 3.03**, no acotado |
+| stub en L, ancho de la pata | 1.00 | x ∈ [38.50, 39.50], cota del plano |
 | stub en L, pata vertical | x ∈ [38.50, 39.50] | de y = 13.00 hasta el plano en 16.03 |
-| stub en L, bounding box | 5.00 × **4.03** | el plano rotula 4.05 — ver discrepancias |
+| stub en L, bounding box | 5.00 × **4.05** | cota del plano, respetada exacta |
 
 ### Línea RF
 
@@ -102,27 +103,91 @@ relación entre las dos posiciones es lo que fija la impedancia de entrada.
 
 ### Área de cobre
 
-**480.81 mm²** (sin contar el ancla del pad de feed). Se comprueba por dos caminos
+**480.91 mm²** (sin contar el ancla del pad de feed). Se comprueba por dos caminos
 independientes que tienen que coincidir: suma de rectángulos y fórmula del zapatero
 sobre el contorno cerrado. Esa doble comprobación es la que detectó un vértice mal
 puesto en la primera versión del contorno.
+
+## Medir estas cotas en KiCad
+
+Las tres cotas verticales del plano están **dibujadas** en el footprint, sobre `Cmts.User`:
+marcas testigo en los dos extremos y el tramo entre ellas. No son objetos de cota de KiCad
+—un `.kicad_mod` no admite ese tipo, son de placa— pero se pueden medir con la regla.
+
+| Cota | Va de | a | Dónde está la marca |
+|---|---|---|---|
+| **3.03** | fondo del cobre, y = 13.00 | borde del plano, y = 16.03 | x = −2.30, a la izquierda |
+| **4.05** | techo del tramo del stub, y = 11.98 | borde del plano, y = 16.03 | x = 41.20, a la derecha |
+| **5.60** | borde del plano, y = 16.03 | pad de C101/L101, y = 21.63 | x = 31.00, bajo el feed |
+
+> **La regla de KiCad se engancha a la rejilla.** Con rejilla de 0.5 o 1 mm, **3.03 se lee
+> como 3.000 y 4.05 como 4.000**, y parece que la geometría está mal cuando lo que está mal
+> es la medida. Pon la rejilla en **0.01 mm** (o menor), o mantén **Ctrl** pulsado mientras
+> mides para desactivar el enganche.
+
+> **El 5.60 no es una distancia interna del footprint.** Va del borde del plano al pad de
+> C101/L101, y **ese condensador es un componente de placa, no parte de la antena**. Dentro
+> del footprint solo está el testigo que marca dónde tiene que caer ese pad; la distancia
+> real solo existe una vez colocado el 0402 en la placa. En la placa de prueba sí se
+> comprueba: `verify_board.py` mide el borde del pad 1 de L101 a 5.60 del plano.
+
+`verify.py` comprueba que las cuatro marcas caen exactamente sobre la geometría que dicen
+medir (13.00, 11.98, 16.03 y 21.63), así que una anotación no puede quedarse desfasada de
+las cotas sin que el build falle.
 
 ## Discrepancias encontradas en el plano
 
 Están documentadas porque afectan a decisiones, no por pedantería.
 
-### 1. Stub en L: 4.05 rotulado vs 4.03 derivado
+### 1. Stub en L: la cota 4.05 — corregido
 
-La cadena de cotas principal cierra exacta: 4.00 + 13.00 + 3.03 = 20.03. Con esa cadena,
-la altura del bounding box del stub sale **4.03**, no el 4.05 que rotula la nota 4.
-Diferencia de **0.02 mm**, muy por debajo de la tolerancia de fabricación (±0.1 mm típico
-en JLCPCB) y sin efecto medible a 915 MHz.
+> **Una versión anterior implementó 4.03 y estaba mal.** Se dejó documentado que «el rótulo
+> 4.05 es el valor redondeado». Ese razonamiento no se sostiene: **redondear 4.03 a dos
+> decimales da 4.03, no 4.05.** Un rótulo de CAD se calcula de la geometría; no puede
+> aparecer 4.05 sobre una geometría de 4.03.
 
-**Se implementó 4.03**, para no romper la cadena 20.03 que sí está cotada dos veces.
+**De dónde salía el error.** Se supuso que el tramo horizontal del stub medía **1.00** de
+alto, igual que el ancho de su pata. Con esa suposición, `STUB_TOP_Y = 13.00 − 1.00 = 12.00`
+y el bounding box sale 16.03 − 12.00 = **4.03**. Pero **ese alto no está acotado en el
+plano**: era una suposición, no un dato. Y para que la comprobación pasara se escribió con
+`tol=0.03`, o sea se ajustó la prueba para que aceptara la suposición. Mal método.
 
-**Resuelto con el bitmap original:** el borde superior del stub cae en y = 218 px → 12.01 mm,
-y el borde del plano en y = 251 px → 16.03 mm. La propia geometría dibujada mide **4.02 mm**.
-Así que el rótulo de 4.05 es el valor redondeado, y 4.03 es correcto.
+**Cómo se resuelve.** Las dos cotas verticales de esa zona **comparten la flecha inferior**
+— medido sobre el bitmap original, las puntas caen en las filas 226.5 / 251.5 (cota 3.03) y
+218.5 / 251.5 (cota 4.05); la fila 251.5 es el borde del plano en ambas. Restarlas es
+aritmética sobre los valores impresos por SJI, sin depender de píxeles:
+
+```
+   4.05   techo del tramo horizontal -> borde del plano
+ − 3.03   fondo del cobre de la antena -> borde del plano
+ = 1.02   alto del tramo horizontal
+```
+
+Ese **1.02 es la única cota de la cadena que el plano deja libre**, y por eso es la que
+absorbe la diferencia. Respetando las dos cotas impresas no se contradice nada del dibujo.
+
+**Se implementa 4.05**, con `STUB_V_EXT` como parámetro de entrada y `STUB_RUN_H = 1.02`
+derivado. La comprobación es ahora **exacta**, sin tolerancia.
+
+**Por qué la medida no podía decidirlo.** El bitmap del plano tiene 8.203 px/mm
+(**0.122 mm/px**) y el arte de producción 15.63 px/mm (**0.064 mm/px**). La diferencia entre
+4.03 y 4.05 es **0.02 mm = 0.16 px**. Ninguna de las dos fuentes puede resolverla:
+
+| Fuente | Medido |
+|---|---|
+| Plano, geometría dibujada (33 px) | 4.02 – 4.05 según con qué cota se calibre |
+| Arte de producción FCC pág. 5 | 4.030 ± 0.06 |
+| Plano, **texto impreso** | **4.05** |
+
+Las medidas son compatibles con ambos valores; el texto impreso solo con uno. **Manda el
+texto impreso**: en una réplica cuyo objetivo es la equivalencia regulatoria, no se
+sobrescribe en silencio una cota declarada por el fabricante con un valor derivado de una
+suposición propia.
+
+**Impacto eléctrico: ninguno.** 0.02 mm sobre un brazo de stub a 915 MHz es λ/16000, y está
+por debajo de la tolerancia de grabado de cualquier fabricante (±0.05 mm o peor). El cambio
+es por fidelidad y por honestidad del modelo, no porque mueva la resonancia. El área de
+cobre pasa de 480.81 a **480.91 mm²** (+0.10 = 5.00 × 0.02).
 
 ### 2. C101: serie o shunt — resuelto por el esquemático oficial
 

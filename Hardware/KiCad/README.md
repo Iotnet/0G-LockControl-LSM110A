@@ -11,7 +11,7 @@ Diseño en KiCad de la antena IFA ranurada del plano **«1.5 Antenna Dimension»
 ![vista previa](export/antenna-geometry-preview.svg)
 
 Todo se genera desde un único fichero de geometría paramétrica y se verifica con el motor
-real de KiCad: **122 comprobaciones, 0 fallos, DRC limpio**.
+real de KiCad: **134 comprobaciones, 0 fallos, DRC limpio**.
 
 ---
 
@@ -93,8 +93,10 @@ campos `Footprint` de los dos símbolos. Si usas otro, los enlaces hay que rehac
 
 Los símbolos son dos archivos y por tanto dos nicknames — no se pueden unificar, y es mejor
 así: `LSM110A.kicad_sym` está en formato KiCad 9 y `0G_Antenna.kicad_sym` en formato KiCad 7
-(que KiCad 7/8/9 leen todos). Si abres el proyecto con KiCad 7, el símbolo del LSM110A no
-cargará; el de la antena sí.
+(que KiCad 7/8/9 leen todos). **Probado con KiCad 7.0.11:** con KiCad 7 u 8 tendrás el módulo
+en el PCB pero no en el esquemático — su footprint sí carga (formato 8, tolerante) y su
+símbolo no (`Unable to load library`). Con KiCad 9 carga todo. Tabla completa en el
+[README de `kicad-lib`](../v0-replica-sji/kicad-lib/README.md#nota-de-versión-de-kicad).
 
 La `fp-lib-table` de `antenna-test-board/` ya trae la entrada de footprints resuelta con ruta
 relativa, así que la placa de prueba se abre sin configurar nada.

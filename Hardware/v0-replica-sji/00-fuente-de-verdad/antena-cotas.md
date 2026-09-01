@@ -48,7 +48,8 @@ El `50.00` coincide con el ancho total de la placa de referencia (**50 × 80 mm*
 | Retorno derecho | **5.00** | horizontal, del eje del feed (x 34.00) al eje de la pata del stub (x 39.00) | alta · **confirmada en §2.5** (39.02 − 34.03 = 4.99) |
 | Alto del brazo 3 (inferior) | **2.00** | vertical, cerca del extremo izquierdo del brazo 3 | ~~baja~~ → alta · **confirmada en §2.5** (1.92) |
 | Hueco antena ↔ plano | **3.03** | vertical, zona inferior central | ~~baja~~ → alta · **confirmada en §2.5** (3.13) |
-| — | **4.05** | vertical, lado derecho, zona de las ranuras = bounding box de la pata del stub | media (la reconstrucción cierra en **4.03**; ver §2.5) |
+| — | **4.05** | vertical, lado derecho: **techo del tramo horizontal del stub → borde del plano** | alta · **es cota de entrada** (ver §2.6) |
+| *(no acotada)* | *1.02* | alto del tramo horizontal del stub = **4.05 − 3.03**. El plano **no** la acota | derivada · ver §2.6 |
 | — | **5.60** | vertical, del borde inferior de la pestaña al pad de C101 | alta |
 
 **Cierre dimensional (era la deuda §3.4, ahora resuelta):**
@@ -84,7 +85,7 @@ La antena es una **placa ranurada**, no un serpentín: un rectángulo macizo de 
 
 **Lo que sí era correcto:** el feed y el stub miden **1.00 mm** y son distintos del resto. **Lo que hay que descartar:** que exista pista radiante de 0.50 mm.
 
-**Por qué importa, y no es un detalle de redacción.** Un meandro de 0.50 mm y una placa ranurada de 39.50 × 13.00 mm **no son la misma antena**: no tienen el mismo área de cobre (la real son **480.81 mm²**), ni la misma distribución de corriente, ni el mismo ancho de banda. Precisamente el ancho de banda es lo que explica §5 — que la referencia resuene ~925 MHz y aun así dé −16.4 dB en 902.1 es comportamiento de **placa ranurada**; un meandro fino de esa longitud eléctrica sería mucho más estrecho y no cubriría 902–928. Haber redibujado un meandro habría dado una antena que ni cumple el requisito de FCC (§4 de `user-manual-antenna-trace-design`: *misma traza*) ni cubre la banda.
+**Por qué importa, y no es un detalle de redacción.** Un meandro de 0.50 mm y una placa ranurada de 39.50 × 13.00 mm **no son la misma antena**: no tienen el mismo área de cobre (la real son **480.91 mm²**), ni la misma distribución de corriente, ni el mismo ancho de banda. Precisamente el ancho de banda es lo que explica §5 — que la referencia resuene ~925 MHz y aun así dé −16.4 dB en 902.1 es comportamiento de **placa ranurada**; un meandro fino de esa longitud eléctrica sería mucho más estrecho y no cubriría 902–928. Haber redibujado un meandro habría dado una antena que ni cumple el requisito de FCC (§4 de `user-manual-antenna-trace-design`: *misma traza*) ni cubre la banda.
 
 ### 2.4 Zona del feed — ⚠ CORREGIDO EN R4
 
@@ -140,6 +141,35 @@ Ese patrón `cobre grueso / hueco fino` repetido es la prueba directa de que el 
 Todas las desviaciones están por debajo de **0.10 mm** ≈ 1.6 px, o sea dentro del error del método. **El plano acotado (UM §1.5) y el arte de producción (FCC pág. 5) describen la misma geometría, y la reconstrucción de `antenna_geometry.py` coincide con ambos.**
 
 Los scripts de medida no se versionan (son de un solo uso, sobre un PDF que sí está en el repo); el procedimiento de arriba basta para repetirlos.
+
+### 2.6 Las cotas 3.03 y 4.05 comparten flecha — R5
+
+Medido sobre el **bitmap nativo del plano** (522 × 417 px extraídos del PDF, escala **8.203 px/mm**, resolución **0.122 mm/px**), las dos cotas verticales de la zona del stub tienen sus puntas de flecha en:
+
+| Cota | Fila superior | Fila inferior | Qué mide |
+|---|---|---|---|
+| **3.03** | 226.5 → `y = 13.04` | 251.5 → `y = 16.09` | fondo del cobre → borde del plano |
+| **4.05** | 218.5 → `y = 12.07` | **251.5** → `y = 16.09` | techo del tramo del stub → borde del plano |
+
+**Comparten la flecha inferior**, así que restarlas es aritmética sobre los valores impresos por SJI, sin depender de la medida:
+
+```
+  4.05 − 3.03 = 1.02   alto del tramo horizontal del stub
+```
+
+Ese 1.02 **no está acotado en ninguna parte del plano** — es la única cota de la cadena vertical que el dibujo deja libre, y por eso es la que absorbe la diferencia.
+
+**Esto corrigió un error de la reconstrucción.** Una versión anterior supuso que el tramo medía 1.00 (igual que el ancho de su pata), lo que daba un bounding box de 4.03 en vez de 4.05, y la comprobación se escribió con tolerancia 0.03 para que pasara. Detalle completo en `../../KiCad/docs/geometria-antena.md` §1.
+
+**La medida no puede arbitrar los 0.02 mm:** son 0.16 px en el plano y 0.31 px en el arte. Ambas fuentes son compatibles con 4.03 y con 4.05. Lo que sí decide es que **un rótulo de CAD se calcula de la geometría**: redondear 4.03 a dos decimales da 4.03, nunca 4.05. Manda la cota impresa.
+
+**Sin efecto eléctrico:** 0.02 mm a 915 MHz es λ/16000, por debajo de la tolerancia de grabado. El cambio es por fidelidad al plano, no porque mueva la resonancia.
+
+### 2.7 Qué mide la cota 5.60 — R5
+
+También localizada en el bitmap (`x = 331`, partida en dos tramos porque el texto la interrumpe): va de la fila **252** (`y = 16.15`, borde del plano) a la fila **298** (`y = 21.76`), o sea **del borde del plano de tierra al pad de C101**, en `y = 16.03 + 5.60 = 21.63`.
+
+Importa para el layout: **C101 no está en la antena**. Es un componente de placa, y el 5.60 solo existe una vez colocado. En el footprint hay una marca testigo en 21.63 indicando dónde tiene que caer ese pad, nada más.
 
 ---
 

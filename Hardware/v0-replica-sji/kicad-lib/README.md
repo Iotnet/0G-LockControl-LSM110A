@@ -18,7 +18,7 @@ path registrado en KiCad, un solo nickname de footprints.
 
 > **Los seis marcados «generado» NO se editan a mano.** Salen de
 > `../../KiCad/tools/build.sh`, que los reescribe desde `antenna_geometry.py` y después los
-> verifica con el motor de KiCad (**122 comprobaciones, DRC = 0**). Cualquier cambio manual
+> verifica con el motor de KiCad (**134 comprobaciones, DRC = 0**). Cualquier cambio manual
 > se pierde en el siguiente build. Para mover una cota, se corrige `antenna_geometry.py`.
 >
 > Los dos del LSM110A **no** los toca ese build: son de F1 y se quedan como están.

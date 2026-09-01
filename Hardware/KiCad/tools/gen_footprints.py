@@ -163,10 +163,44 @@ def build_antenna() -> str:
     L.append(fp_text(tag, "user", "keepout: sin plano / sin vias / sin pistas / sin componentes",
                      cx, G.Y_TOP - 2.10, "Dwgs.User", 0.6, 0.1))
 
-    # cotas de referencia del feed y del stub, sobre Cmts.User
-    L.append(fp_text(tag, "user", "FEED 1.00 -> CPWG 1.00/0.15, 5.60 hasta C101",
+    # ---- cotas dibujadas, sobre Cmts.User ----------------------------------
+    # Un .kicad_mod no admite objetos de cota de KiCad (esos son de placa), asi
+    # que se dibujan con lineas: dos marcas testigo y el tramo entre ellas. El
+    # objetivo es que las cotas del plano se puedan COMPROBAR sobre el footprint
+    # en vez de tener que creerselas: basta poner la regla entre las dos marcas.
+    #
+    # OJO al medir en KiCad: la regla se engancha a la rejilla. Con rejilla de
+    # 0.5 o 1 mm, 3.03 se lee como 3.000 y 4.05 como 4.000. Hay que poner la
+    # rejilla en 0.01 mm, o mantener pulsada Ctrl para desactivar el enganche.
+    def dim_v(key, x, y0, y1, label, tick=0.8, lx=None, side=-1):
+        """Cota vertical: marcas testigo en y0 e y1, tramo entre ellas y texto."""
+        out = [fp_line(tag, f"{key}_t0", x - tick / 2, y0, x + tick / 2, y0,
+                       "Cmts.User", 0.05),
+               fp_line(tag, f"{key}_t1", x - tick / 2, y1, x + tick / 2, y1,
+                       "Cmts.User", 0.05),
+               fp_line(tag, f"{key}_ln", x, y0, x, y1, "Cmts.User", 0.05)]
+        out.append(fp_text(tag, "user", label,
+                           lx if lx is not None else x + side * 1.6,
+                           (y0 + y1) / 2.0, "Cmts.User", 0.5, 0.08))
+        return out
+
+    # 3.03: fondo del cobre -> borde del plano de tierra.
+    L += dim_v("dim303", -2.30, G.Y_BOT, G.Y_GND, "3.03", lx=-3.85)
+    # 4.05: techo del tramo horizontal del stub -> borde del plano.
+    L += dim_v("dim405", 41.20, G.STUB_TOP_Y, G.Y_GND, "4.05", lx=42.75)
+    # 5.60: borde del plano -> pad de C101. Cae FUERA del footprint (el
+    # condensador es un componente de placa), por eso se marca aparte y se
+    # rotula: aqui solo esta el testigo de donde tiene que caer ese pad.
+    L += dim_v("dim560", G.FEED_CENTER_X - 3.0, G.Y_GND, G.C101_PAD_Y,
+               "5.60", lx=G.FEED_CENTER_X - 4.55)
+    L.append(fp_text(tag, "user", "borde del pad de C101/L101 (componente de placa)",
+                     G.FEED_CENTER_X - 3.0, G.C101_PAD_Y + 0.75, "Cmts.User", 0.5, 0.08))
+
+    L.append(fp_text(tag, "user", "FEED 1.00 -> CPWG 1.00 / 0.15",
                      G.FEED_CENTER_X - 11.0, G.Y_GND + 2.0, "Cmts.User", 0.6, 0.1))
-    L.append(fp_text(tag, "user", "stub L a GND 5.00 x 4.03 (ancho 1.00)",
+    L.append(fp_text(tag, "user",
+                     f"stub L a GND: tramo {G.STUB_RUN:.2f} x {G.STUB_RUN_H:.2f}, "
+                     f"pata {G.STUB_W:.2f}",
                      G.STUB_X1 + 0.6, G.STUB_TOP_Y + 0.5, "Cmts.User", 0.6, 0.1))
 
     # ---- pad 1: TODO el cobre de la antena ---------------------------------

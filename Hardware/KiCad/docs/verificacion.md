@@ -1,7 +1,7 @@
 # Verificación
 
 El diseño se verifica ejecutando `tools/build.sh`, que regenera todo desde
-`antenna_geometry.py` y corre **122 comprobaciones**. Devuelve código ≠ 0 si algo falla,
+`antenna_geometry.py` y corre **134 comprobaciones**. Devuelve código ≠ 0 si algo falla,
 así que se puede colgar de CI tal cual.
 
 ```
@@ -15,10 +15,21 @@ o el `pcbnew` de la instalación oficial).
 
 | Bloque | Comprobaciones | Estado |
 |---|---|---|
-| Cadena de cotas | 17 | ✅ |
-| Footprints, cargados con el motor de KiCad | 63 | ✅ |
+| Cadena de cotas | 19 | ✅ |
+| Footprints, cargados con el motor de KiCad | 73 | ✅ |
 | Placa: DRC + cotas del cobre real | 42 | ✅ |
-| **Total** | **122** | **✅ 0 fallos** |
+| **Total** | **134** | **✅ 0 fallos** |
+
+> **R5 — una comprobación con tolerancia tapó un error.** La cota 4.05 del stub se
+> comprobaba con `tol=0.03` contra una geometría que daba 4.03: la prueba estaba ajustada
+> para aceptar la suposición en vez de para detectar el fallo. Ahora la cota manda y la
+> comprobación es exacta. Se añadieron además una **medida del canto** del tramo del stub
+> (se busca el borde barriendo el polígono relleno, no se sondean puntos sueltos) y siete
+> comprobaciones de que **las cotas dibujadas caen sobre la geometría que dicen medir**.
+> Detalle en [`geometria-antena.md` §1](geometria-antena.md#1-stub-en-l-la-cota-405--corregido).
+>
+> Lección de método: **una tolerancia que no viene de la fabricación ni del instrumento es
+> un parche.** Si hay que ensancharla para que pase, lo que falla es el modelo.
 
 Además, una verificación **píxel a píxel contra el plano oficial** del User Manual
 LSM110A Rev 1.4 (sección 1.5): los seis niveles verticales, las dos aperturas de ranura, los
