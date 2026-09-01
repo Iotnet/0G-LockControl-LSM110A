@@ -110,30 +110,55 @@ puesto en la primera versión del contorno.
 
 ## Medir estas cotas en KiCad
 
-Las tres cotas verticales del plano están **dibujadas** en el footprint, sobre `Cmts.User`:
-marcas testigo en los dos extremos y el tramo entre ellas. No son objetos de cota de KiCad
-—un `.kicad_mod` no admite ese tipo, son de placa— pero se pueden medir con la regla.
+**Regla: cada cota vive donde está el cobre que mide.** Una cota que apunta a un sitio donde
+no hay nada estorba y hace dudar de la geometría, así que las tres cotas verticales del plano
+están repartidas entre el footprint y la placa.
+
+### En el footprint (`Cmts.User`) — las dos que miden cantos propios
 
 | Cota | Va de | a | Dónde está la marca |
 |---|---|---|---|
 | **3.03** | fondo del cobre, y = 13.00 | borde del plano, y = 16.03 | x = −2.30, a la izquierda |
 | **4.05** | techo del tramo del stub, y = 11.98 | borde del plano, y = 16.03 | x = 41.20, a la derecha |
-| **5.60** | borde del plano, y = 16.03 | pad de C101/L101, y = 21.63 | x = 31.00, bajo el feed |
+
+Son marcas testigo en los dos extremos más el tramo entre ellas, dibujadas con líneas: **un
+`.kicad_mod` no admite objetos de cota de KiCad**, esos son de placa. Se miden con la regla.
+
+`verify.py` comprueba que las marcas caen exactamente sobre la geometría que dicen medir
+(13.00, 11.98, 16.03), y **que no haya ninguna cota por debajo del plano** — donde el
+footprint no tiene cobre. Una anotación no puede quedarse desfasada sin que el build falle.
+
+### En la placa de prueba (`User.Drawings`) — la que mide hasta un componente
+
+| Cota | Va de | a |
+|---|---|---|
+| **5.60** | borde del plano, y = 20.03 | borde del pad 1 de L101, y = 25.63 |
+
+**El 5.60 no cabe en el footprint de la antena.** Va del borde del plano al pad de C101/L101,
+y ese condensador es un **componente de placa**: dentro del footprint no hay cobre a esa
+altura, así que la cota apuntaría al vacío. Se dibuja en la placa, donde el pad existe, y ahí
+sí es un **objeto de cota de KiCad de verdad** — el valor lo calcula KiCad, de modo que si
+alguien mueve el componente la cota se actualiza y deja de coincidir con el plano a la vista.
+`verify_board.py` comprueba que exista, que mida 5.60, que caiga sobre el eje de la línea RF
+y que esté en una capa de documentación y no de cobre.
+
+### Al medir con la regla
 
 > **La regla de KiCad se engancha a la rejilla.** Con rejilla de 0.5 o 1 mm, **3.03 se lee
 > como 3.000 y 4.05 como 4.000**, y parece que la geometría está mal cuando lo que está mal
 > es la medida. Pon la rejilla en **0.01 mm** (o menor), o mantén **Ctrl** pulsado mientras
 > mides para desactivar el enganche.
 
-> **El 5.60 no es una distancia interna del footprint.** Va del borde del plano al pad de
-> C101/L101, y **ese condensador es un componente de placa, no parte de la antena**. Dentro
-> del footprint solo está el testigo que marca dónde tiene que caer ese pad; la distancia
-> real solo existe una vez colocado el 0402 en la placa. En la placa de prueba sí se
-> comprueba: `verify_board.py` mide el borde del pad 1 de L101 a 5.60 del plano.
+### Hasta dónde llega el cobre del footprint
 
-`verify.py` comprueba que las cuatro marcas caen exactamente sobre la geometría que dicen
-medir (13.00, 11.98, 16.03 y 21.63), así que una anotación no puede quedarse desfasada de
-las cotas sin que el build falle.
+El pad de feed baja **1.50 mm por debajo del borde del plano** (hasta y = 17.53) y ahí se
+acaba. No es un recorte: es deliberado, para que la pista CPWG pueda **arrancar fuera del
+keepout** y aun así caer dentro del pad — una pista de 1.00 mm tiene casquete redondo de
+0.50 mm de radio, así que su punto de arranque tiene que quedar a ≥ 0.50 mm del borde.
+
+Los 5.60 mm de línea hasta C101 **no son parte de la antena**: son ruteo. Si el footprint los
+llevara, impondría dónde va la red de matching y duplicaría cobre con la pista de la placa.
+Por eso el footprint acaba en 17.53 y el resto lo pones tú al rutear.
 
 ## Discrepancias encontradas en el plano
 

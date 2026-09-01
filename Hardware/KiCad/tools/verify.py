@@ -199,15 +199,20 @@ def verify_dimensions(lib: Path) -> None:
 
     for want, label in ((G.Y_BOT, "3.03: testigo en el fondo del cobre (13.00)"),
                         (G.STUB_TOP_Y, "4.05: testigo en el techo del stub (11.98)"),
-                        (G.Y_GND, "3.03 y 4.05: testigo en el borde del plano (16.03)"),
-                        (G.C101_PAD_Y, "5.60: testigo en el pad de C101 (21.63)")):
+                        (G.Y_GND, "3.03 y 4.05: testigo en el borde del plano (16.03)")):
         hit = min(ys, key=lambda v: abs(v - want)) if ys else float("nan")
         check(abs(hit - want) <= 0.002, label, f"testigo mas cercano en y = {hit}")
 
-    # y los tres valores rotulados tienen que salir de la geometria, no del texto
+    # los dos valores rotulados salen de la geometria, no del texto
     close(G.Y_GND - G.Y_BOT, 3.03, "cota rotulada 3.03 = Y_GND - Y_BOT")
     close(G.Y_GND - G.STUB_TOP_Y, 4.05, "cota rotulada 4.05 = Y_GND - STUB_TOP_Y")
-    close(G.C101_PAD_Y - G.Y_GND, 5.60, "cota rotulada 5.60 = C101_PAD_Y - Y_GND")
+
+    # Y NO puede haber cotas por debajo del plano: ahi el footprint no tiene
+    # cobre, asi que cualquier cota apuntaria al vacio. La 5.60 va en la placa.
+    huerfanas = [y for y in ys if y > G.Y_GND + 0.01]
+    check(not huerfanas,
+          "sin cotas por debajo del plano (la 5.60 va en la placa, no aqui)",
+          f"{len(huerfanas)} testigo(s) en y = {huerfanas}")
 
 
 def verify_slotrow(lib: Path) -> None:

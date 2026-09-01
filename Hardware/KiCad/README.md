@@ -11,7 +11,7 @@ Diseño en KiCad de la antena IFA ranurada del plano **«1.5 Antenna Dimension»
 ![vista previa](export/antenna-geometry-preview.svg)
 
 Todo se genera desde un único fichero de geometría paramétrica y se verifica con el motor
-real de KiCad: **134 comprobaciones, 0 fallos, DRC limpio**.
+real de KiCad: **138 comprobaciones, 0 fallos, DRC limpio**.
 
 ---
 

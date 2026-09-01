@@ -196,6 +196,24 @@ def main() -> None:
         check(d < 0.30, f"{ref}: via de retorno pegada al pad de GND",
               f"{d:.2f} mm de holgura")
 
+    # ---- cota 5.60 dibujada ----------------------------------------------
+    # Es la cota del plano que no cabe en el footprint de la antena (mide hasta
+    # un componente de placa). Aqui es un objeto de cota de KiCad de verdad, asi
+    # que se comprueba que exista y que mida lo que dice el plano.
+    dims = [d for d in board.GetDrawings() if d.GetClass().startswith("PCB_DIM")]
+    if check(len(dims) == 1, "hay una cota dibujada en la placa", str(len(dims))):
+        d = dims[0]
+        a, b = d.GetStart(), d.GetEnd()
+        close(a.y / MM, PLANE_Y, "cota 5.60: arranca en el borde del plano")
+        close(abs(b.y - a.y) / MM, G.CPWG_LEN,
+              "cota 5.60: mide del plano al borde del pad de L101")
+        close(a.x / MM, FEED_X, "cota 5.60: sobre el eje de la linea RF")
+        # por id de capa, no por nombre: KiCad 7 muestra "User.Drawings" donde
+        # el fichero escribe "Dwgs.User"
+        check(d.GetLayer() == pcbnew.Dwgs_User,
+              "cota 5.60: en una capa de documentacion, no de cobre",
+              board.GetLayerName(d.GetLayer()))
+
     # ---- vias ------------------------------------------------------------
     vias = [t for t in board.GetTracks() if t.Type() == pcbnew.PCB_VIA_T]
     check(len(vias) > 20, "hay costura de vias", f"{len(vias)} vias")

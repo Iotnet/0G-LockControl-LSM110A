@@ -184,20 +184,23 @@ def build_antenna() -> str:
                            (y0 + y1) / 2.0, "Cmts.User", 0.5, 0.08))
         return out
 
+    # Solo se acotan cantos que EXISTEN en este footprint.
     # 3.03: fondo del cobre -> borde del plano de tierra.
     L += dim_v("dim303", -2.30, G.Y_BOT, G.Y_GND, "3.03", lx=-3.85)
     # 4.05: techo del tramo horizontal del stub -> borde del plano.
     L += dim_v("dim405", 41.20, G.STUB_TOP_Y, G.Y_GND, "4.05", lx=42.75)
-    # 5.60: borde del plano -> pad de C101. Cae FUERA del footprint (el
-    # condensador es un componente de placa), por eso se marca aparte y se
-    # rotula: aqui solo esta el testigo de donde tiene que caer ese pad.
-    L += dim_v("dim560", G.FEED_CENTER_X - 3.0, G.Y_GND, G.C101_PAD_Y,
-               "5.60", lx=G.FEED_CENTER_X - 4.55)
-    L.append(fp_text(tag, "user", "borde del pad de C101/L101 (componente de placa)",
-                     G.FEED_CENTER_X - 3.0, G.C101_PAD_Y + 0.75, "Cmts.User", 0.5, 0.08))
+    #
+    # La cota 5.60 del plano NO se dibuja aqui, a proposito. Va del borde del
+    # plano al pad de C101/L101, y ese condensador es un componente de PLACA:
+    # dentro del footprint no hay cobre a esa altura, asi que la cota apuntaria
+    # al vacio. Una cota que no acota nada estorba y hace dudar de la geometria.
+    # Vive donde el cobre existe: como objeto de cota de KiCad en la placa de
+    # prueba (ver gen_test_board.py) y comprobada en verify_board.py.
 
+    # En la banda vacia entre el cobre y el plano, a la altura del feed: asi
+    # nada del footprint cuelga por debajo del cobre.
     L.append(fp_text(tag, "user", "FEED 1.00 -> CPWG 1.00 / 0.15",
-                     G.FEED_CENTER_X - 11.0, G.Y_GND + 2.0, "Cmts.User", 0.6, 0.1))
+                     G.FEED_CENTER_X - 12.0, G.Y_GND - 1.20, "Cmts.User", 0.6, 0.1))
     L.append(fp_text(tag, "user",
                      f"stub L a GND: tramo {G.STUB_RUN:.2f} x {G.STUB_RUN_H:.2f}, "
                      f"pata {G.STUB_W:.2f}",

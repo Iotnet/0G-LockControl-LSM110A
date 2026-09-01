@@ -192,6 +192,27 @@ def pad_of(fp, number):
     raise KeyError(number)
 
 
+def add_dimension(board, x0, y0, x1, y1, layer, offset=0.0):
+    """
+    Cota ALINEADA de KiCad. Aqui si es un objeto de cota de verdad (los
+    .kicad_mod no admiten este tipo, solo las placas), asi que KiCad calcula y
+    muestra el valor el solo: si alguien mueve el pad, la cota se actualiza y
+    deja de coincidir con el plano a la vista.
+    """
+    d = pcbnew.PCB_DIM_ALIGNED(board, pcbnew.PCB_DIM_ALIGNED_T)
+    d.SetLayer(layer)
+    d.SetStart(v(x0, y0))
+    d.SetEnd(v(x1, y1))
+    d.SetHeight(i(offset))
+    d.SetUnitsMode(pcbnew.DIM_UNITS_MODE_MILLIMETRES)
+    d.SetPrecision(2)
+    d.SetLineThickness(i(0.10))
+    d.SetTextSize(v(0.7, 0.7))
+    d.SetTextThickness(i(0.12))
+    board.Add(d)
+    return d
+
+
 def add_gnd_zone(board, net, layer, rect, clearance):
     x0, y0, x1, y1 = rect
     z = pcbnew.ZONE(board)
@@ -300,6 +321,14 @@ def build(outdir: Path) -> None:
     pad_of(coax, "1").SetNet(gnd)
     pad_of(coax, "2").SetNet(rf_in)
     pad_of(coax, "3").SetNet(gnd)
+
+    # ---- cota 5.60 del plano, aqui si sobre cobre real -------------------
+    # Del borde del plano de tierra al borde del pad 1 de L101. Es la unica de
+    # las tres cotas verticales del plano que NO cabe en el footprint de la
+    # antena: mide hasta un componente de placa. Se dibuja aqui, donde el pad
+    # existe, en vez de dejar una flecha al vacio dentro del footprint.
+    add_dimension(board, FEED_X, PLANE_Y, FEED_X, L101_PAD1_Y - CAP_PAD / 2.0,
+                  pcbnew.Dwgs_User, offset=-6.0)
 
     # ---- linea RF: CPWG 1.00 / 0.15 --------------------------------------
     # La pista arranca 0.60 mm por debajo del borde del plano para que su

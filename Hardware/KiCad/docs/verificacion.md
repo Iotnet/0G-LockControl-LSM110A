@@ -1,7 +1,7 @@
 # Verificación
 
 El diseño se verifica ejecutando `tools/build.sh`, que regenera todo desde
-`antenna_geometry.py` y corre **134 comprobaciones**. Devuelve código ≠ 0 si algo falla,
+`antenna_geometry.py` y corre **138 comprobaciones**. Devuelve código ≠ 0 si algo falla,
 así que se puede colgar de CI tal cual.
 
 ```
@@ -16,9 +16,9 @@ o el `pcbnew` de la instalación oficial).
 | Bloque | Comprobaciones | Estado |
 |---|---|---|
 | Cadena de cotas | 19 | ✅ |
-| Footprints, cargados con el motor de KiCad | 73 | ✅ |
-| Placa: DRC + cotas del cobre real | 42 | ✅ |
-| **Total** | **134** | **✅ 0 fallos** |
+| Footprints, cargados con el motor de KiCad | 72 | ✅ |
+| Placa: DRC + cotas del cobre real | 47 | ✅ |
+| **Total** | **138** | **✅ 0 fallos** |
 
 > **R5 — una comprobación con tolerancia tapó un error.** La cota 4.05 del stub se
 > comprobaba con `tol=0.03` contra una geometría que daba 4.03: la prueba estaba ajustada
